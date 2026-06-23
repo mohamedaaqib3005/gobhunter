@@ -20,7 +20,7 @@ def _build_title_patterns(settings: "Settings") -> list[re.Pattern]:
     patterns = []
     for inc in include_keywords:
         patterns.append(re.compile(
-            rf"(?=.*\b{re.escape(inc)}\b)(?!.*\b(?:{exclude_pattern})\b)",
+            rf"^(?=.*\b{re.escape(inc)}\b)(?!.*\b(?:{exclude_pattern})\b)",
             re.IGNORECASE,
         ))
 
