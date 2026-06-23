@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+jobs.db
+.env
+.cookies/
+.browser-profile/
+.sessions/
+logs/
+*.log
+.venv/

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Job Tracker</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 24px; }
+        h1 { margin-bottom: 20px; font-size: 24px; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; margin-bottom: 24px; }
+        .stat-card { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stat-card h3 { font-size: 14px; color: #666; margin-bottom: 4px; }
+        .stat-card .count { font-size: 28px; font-weight: 700; }
+        .filters { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filters select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+        .job-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .job-table th { background: #fafafa; text-align: left; padding: 12px 16px; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #eee; }
+        .job-table td { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
+        .job-table tr:hover { background: #fafafa; }
+        .job-table a { color: #1a73e8; text-decoration: none; font-weight: 500; }
+        .job-table a:hover { text-decoration: underline; }
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: capitalize; }
+        .badge-new { background: #e3f2fd; color: #1565c0; }
+        .badge-applied { background: #e8f5e9; color: #2e7d32; }
+        .badge-rejected { background: #fce4ec; color: #c62828; }
+        .badge-pre-filled { background: #fff3e0; color: #e65100; }
+        .badge-bookmarked { background: #f3e5f5; color: #6a1b9a; }
+        .badge-closed { background: #eceff1; color: #546e7a; }
+        .badge-dismissed { background: #f5f5f5; color: #999; }
+        .badge-irrelevant { background: #fce4ec; color: #c62828; }
+        .source-tag { font-size: 11px; color: #888; }
+        .company { font-weight: 600; }
+    </style>
+    <script>
+        function applyFilter() {
+            const params = new URLSearchParams();
+            document.querySelectorAll('.filters select').forEach(function(sel) {
+                params.set(sel.name, sel.value);
+            });
+            window.location.search = params.toString();
+        }
+    </script>
+</head>
+<body>
+    <h1>Job Tracker</h1>
+
+    <div class="stats">
+        <div class="stat-card">
+            <h3>Relevant</h3>
+            <div class="count">{{ stats._relevant }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Total</h3>
+            <div class="count">{{ stats._total }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Applied</h3>
+            <div class="count">{{ stats._applied }}</div>
+        </div>
+        {% for source in sources %}
+        <div class="stat-card">
+            <h3>{{ source|capitalize }}</h3>
+            <div class="count">{{ stats.get(source, {}).values()|sum }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="filters">
+        <select name="source" onchange="applyFilter()">
+            <option value="all" {% if current_source == 'all' %}selected{% endif %}>All Sources</option>
+            {% for s in sources %}
+            <option value="{{ s }}" {% if current_source == s %}selected{% endif %}>{{ s|capitalize }}</option>
+            {% endfor %}
+        </select>
+        <select name="status" onchange="applyFilter()">
+            <option value="all" {% if current_status == 'all' %}selected{% endif %}>All Status</option>
+            <option value="new" {% if current_status == 'new' %}selected{% endif %}>New</option>
+            <option value="pre-filled" {% if current_status == 'pre-filled' %}selected{% endif %}>Pre-filled</option>
+            <option value="applied" {% if current_status == 'applied' %}selected{% endif %}>Applied</option>
+            <option value="rejected" {% if current_status == 'rejected' %}selected{% endif %}>Rejected</option>
+            <option value="bookmarked" {% if current_status == 'bookmarked' %}selected{% endif %}>Bookmarked</option>
+            <option value="dismissed" {% if current_status == 'dismissed' %}selected{% endif %}>Not Interested</option>
+        </select>
+        <select name="relevant" onchange="applyFilter()">
+            <option value="true" {% if current_relevant == 'true' %}selected{% endif %}>Relevant only</option>
+            <option value="all" {% if current_relevant == 'all' %}selected{% endif %}>All jobs</option>
+        </select>
+    </div>
+
+    <table class="job-table">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Company</th>
+                <th>Location</th>
+                <th>Source</th>
+                <th>Status</th>
+                <th>Relevance</th>
+                <th>Posted</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in jobs %}
+            <tr>
+                <td><a href="/job/{{ job.id }}?source={{ current_source }}&status={{ current_status }}&relevant={{ current_relevant }}">{{ job.title }}</a></td>
+                <td class="company">{{ job.company }}</td>
+                <td>{{ job.location }}</td>
+                <td><span class="source-tag">{{ job.source }}</span></td>
+                <td><span class="badge badge-{{ job.status.value }}">{{ job.status.value }}</span></td>
+                <td>{% if job.title|relevant %}<span class="badge badge-new">Yes</span>{% else %}<span class="badge badge-irrelevant">No</span>{% endif %}</td>
+                <td>{{ job.posted_date or '-' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" style="text-align:center;padding:40px;color:#999;">No jobs found</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
