@@ -224,6 +224,18 @@ def update_job_status(job_id: int, status: JobStatus, notes: str | None = None) 
     conn.close()
 
 
+def update_job_description(job_id: int, description: str) -> None:
+    conn = get_conn()
+    now = datetime.now(timezone.utc).isoformat()
+    conn.execute(
+        "UPDATE jobs SET description = ?, updated_at = ? WHERE id = ?",
+        (description, now, job_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+
 def get_stats() -> dict:
     conn = get_conn()
     rows = conn.execute(

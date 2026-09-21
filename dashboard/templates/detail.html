@@ -47,9 +47,7 @@
             {% if job.salary_range %}<span>{{ job.salary_range }}</span>{% endif %}
             {% if job.posted_date %}<span>Posted: {{ job.posted_date }}</span>{% endif %}
         </div>
-        {% if job.description %}
-        <div class="description">{{ job.description }}</div>
-        {% endif %}
+        <div class="description">{{ job.description if job.description else "No description available." }}</div>
         <p style="margin-bottom:16px;">
             <a href="{{ job.source_url }}" target="_blank" class="external">View original listing &rarr;</a>
         </p>
@@ -60,6 +58,8 @@
                 <input type="hidden" name="relevant" value="{{ back_relevant }}">
                 <button class="btn btn-primary">Pre-fill Application</button>
             </form>
+
+
             <form action="/job/{{ job.id }}/status" method="post">
                 <input type="hidden" name="source" value="{{ back_source }}">
                 <input type="hidden" name="cur_status" value="{{ back_status }}">

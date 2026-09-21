@@ -118,7 +118,23 @@ async def run_scrape() -> None:
         print(f"[{name}] {'Cookies loaded' if cookies else 'Scraping public listings'}...")
 
         async def search(page):
-            return await scraper.search(page, settings.search_query, settings.search_locations)
+            results = await scraper.search(page, settings.search_query, settings.search_locations)
+            for job_data in results:
+                from config import is_relevant_title
+                from database import job_exists, job_exists_by_content
+                title = job_data.get("title", "")
+                company = job_data.get("company", "")
+                location = job_data.get("location", "")
+                url = job_data.get("source_url", "")
+                if is_relevant_title(title) and not job_exists(url, scraper.name) and not job_exists_by_content(title, company, location, scraper.name):
+                    try:
+                        print(f"[{name}] Fetching full description for: {title}...")
+                        full_desc = await scraper.fetch_description(page, url)
+                        if full_desc:
+                            job_data["description"] = full_desc
+                    except Exception as e:
+                        print(f"[{name}] Failed to fetch description for {url}: {e}")
+            return results
 
         try:
             jobs = await scrape_with_cookies(scraper.login_url, search, cookies)
