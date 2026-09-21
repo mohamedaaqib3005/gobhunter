@@ -32,3 +32,9 @@ class Job(BaseModel):
     def dict(self, *args, **kwargs):
         d = super().model_dump(*args, **kwargs)
         return d
+
+
+class JobStatusUpdate(BaseModel):
+    status: JobStatus
+    notes: str | None = None
+
