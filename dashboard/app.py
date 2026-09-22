@@ -72,7 +72,7 @@ async def index(
         "current_source": source or "all",
         "current_status": status or "all",
         "current_relevant": relevant or "true",
-        "sources": ["indeed", "naukri", "shine", "timesjobs", "instahyre", "cutshort", "linkedin", "wellfound"],
+        "sources": ["indeed", "naukri",  "instahyre", "cutshort", "linkedin", "wellfound"],
     })
 
 

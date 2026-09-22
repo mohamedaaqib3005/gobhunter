@@ -65,8 +65,6 @@ def main() -> None:
 SITES = {
     "indeed": {"url": "https://in.indeed.com", "status": "public"},
     "naukri": {"url": "https://www.naukri.com", "status": "public"},
-    "shine": {"url": "https://www.shine.com", "status": "public"},
-    "timesjobs": {"url": "https://www.timesjobs.com", "status": "public"},
     "instahyre": {"url": "https://www.instahyre.com", "status": "public"},
     "cutshort": {"url": "https://cutshort.io", "status": "cookies"},
     "linkedin": {"url": "https://www.linkedin.com", "status": "cookies"},
@@ -109,8 +107,6 @@ async def run_scrape() -> None:
         print(f"[cleanup] Deleted {deleted} duplicate jobs")
     from scrapers.indeed import IndeedScraper
     from scrapers.naukri import NaukriScraper
-    from scrapers.shine import ShineScraper
-    from scrapers.timesjobs import TimesJobsScraper
     from scrapers.cutshort import CutshortScraper
     from scrapers.instahyre import InstahyreScraper
     from scrapers.linkedin import LinkedInScraper
@@ -120,8 +116,6 @@ async def run_scrape() -> None:
     scraper_map = {
         "indeed": IndeedScraper(),
         "naukri": NaukriScraper(),
-        "shine": ShineScraper(),
-        "timesjobs": TimesJobsScraper(),
         "cutshort": CutshortScraper(),
         "instahyre": InstahyreScraper(),
         "linkedin": LinkedInScraper(),
