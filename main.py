@@ -14,7 +14,7 @@ def main() -> None:
     COOKIES_DIR.mkdir(exist_ok=True)
     args = sys.argv[1:]
     if not args:
-        print("Usage: python main.py [scrape|dashboard|fill <job_id>|cookies|cleanup|deduplicate]")
+        print("Usage: python main.py [scrape|dashboard|fill <job_id>|description <platform> <url>|cookies|cleanup|deduplicate]")
         return
 
     command = args[0]
@@ -25,8 +25,25 @@ def main() -> None:
     elif command == "fill" and len(args) >= 2:
         job_id = int(args[1])
         asyncio.run(run_fill(job_id))
+    elif command == "description" and len(args) >= 2:
+        if len(args) >= 3:
+            platform = args[1].lower()
+            url = args[2]
+        else:
+            arg = args[1]
+            if "naukri.com" in arg:
+                platform = "naukri"
+                url = arg
+            elif "indeed.com" in arg:
+                platform = "indeed"
+                url = arg
+            else:
+                platform = "naukri"
+                url = arg
+        asyncio.run(run_description(platform, url))
     elif command == "cookies":
         print_cookie_instructions()
+
     elif command == "cleanup":
         deleted = delete_irrelevant_jobs()
         print(f"Deleted {deleted} irrelevant jobs")
@@ -38,6 +55,7 @@ def main() -> None:
         print(f"Deleted {deleted} duplicate jobs")
     else:
         print(f"Unknown command: {command}")
+
 
 
 SITES = {
@@ -183,6 +201,59 @@ async def run_fill(job_id: int) -> None:
             await asyncio.sleep(10)
     except asyncio.CancelledError:
         pass
+
+
+async def run_description(platform: str, url: str) -> None:
+    from scrapers.indeed import IndeedScraper
+    from scrapers.naukri import NaukriScraper
+    from utils.browser import scrape_with_cookies
+
+    scraper_map = {
+        "indeed": IndeedScraper(),
+        "naukri": NaukriScraper(),
+    }
+
+    if platform not in scraper_map:
+        print(f"Unsupported platform: '{platform}'. Supported platforms: {', '.join(scraper_map.keys())}")
+        return
+
+    scraper = scraper_map[platform]
+    cookie_file = COOKIES_DIR / f"{platform}.json"
+    cookies = json.loads(cookie_file.read_text()) if cookie_file.exists() else []
+
+    async def fetch(page):
+        return await scraper.get_job_details(page, url)
+
+    print(f"[{platform}] Fetching job details from: {url}")
+    details = await scrape_with_cookies(url, fetch, cookies)
+
+    if not details:
+        print(f"Failed to fetch job details from {platform}.")
+        return
+
+    print("\n" + "=" * 60)
+    print(f"JOB DETAILS ({platform.upper()})")
+    print("=" * 60)
+    if details.get("title"):
+        print(f"Title:       {details['title']}")
+    if details.get("company"):
+        print(f"Company:     {details['company']}")
+    if details.get("location"):
+        print(f"Location:    {details['location']}")
+    if details.get("salary_range"):
+        print(f"Salary:      {details['salary_range']}")
+    if details.get("key_skills"):
+        print(f"Key Skills:  {', '.join(details['key_skills'])}")
+    print("-" * 60)
+    print("DESCRIPTION:")
+    print("-" * 60)
+    desc = details.get("description")
+    if desc:
+        print(desc)
+    else:
+        print("No description extracted or description element not found.")
+    print("=" * 60)
+
 
 
 def run_dashboard() -> None:
