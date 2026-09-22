@@ -37,10 +37,14 @@ def main() -> None:
             elif "indeed.com" in arg:
                 platform = "indeed"
                 url = arg
+            elif "instahyre.com" in arg:
+                platform = "instahyre"
+                url = arg
             else:
                 platform = "naukri"
                 url = arg
         asyncio.run(run_description(platform, url))
+
     elif command == "cookies":
         print_cookie_instructions()
 
@@ -63,8 +67,8 @@ SITES = {
     "naukri": {"url": "https://www.naukri.com", "status": "public"},
     "shine": {"url": "https://www.shine.com", "status": "public"},
     "timesjobs": {"url": "https://www.timesjobs.com", "status": "public"},
+    "instahyre": {"url": "https://www.instahyre.com", "status": "public"},
     "cutshort": {"url": "https://cutshort.io", "status": "cookies"},
-    "instahyre": {"url": "https://www.instahyre.com", "status": "cookies"},
     "linkedin": {"url": "https://www.linkedin.com", "status": "cookies"},
     "wellfound": {"url": "https://wellfound.com", "status": "cookies"},
 }
@@ -205,13 +209,16 @@ async def run_fill(job_id: int) -> None:
 
 async def run_description(platform: str, url: str) -> None:
     from scrapers.indeed import IndeedScraper
+    from scrapers.instahyre import InstahyreScraper
     from scrapers.naukri import NaukriScraper
     from utils.browser import scrape_with_cookies
 
     scraper_map = {
         "indeed": IndeedScraper(),
         "naukri": NaukriScraper(),
+        "instahyre": InstahyreScraper(),
     }
+
 
     if platform not in scraper_map:
         print(f"Unsupported platform: '{platform}'. Supported platforms: {', '.join(scraper_map.keys())}")
