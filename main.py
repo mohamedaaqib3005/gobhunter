@@ -46,6 +46,9 @@ def main() -> None:
             elif "wellfound.com" in arg:
                 platform = "wellfound"
                 url = arg
+            elif "cutshort.io" in arg:
+                platform = "cutshort"
+                url = arg
             else:
                 platform = "naukri"
                 url = arg
@@ -72,7 +75,7 @@ SITES = {
     "indeed": {"url": "https://in.indeed.com", "status": "public"},
     "naukri": {"url": "https://www.naukri.com", "status": "public"},
     "instahyre": {"url": "https://www.instahyre.com", "status": "public"},
-    "cutshort": {"url": "https://cutshort.io", "status": "cookies"},
+    "cutshort": {"url": "https://cutshort.io", "status": "public"},
     "linkedin": {"url": "https://www.linkedin.com", "status": "cookies"},
     "wellfound": {"url": "https://wellfound.com", "status": "cookies"},
 }
@@ -208,6 +211,7 @@ async def run_fill(job_id: int) -> None:
 
 
 async def run_description(platform: str, url: str) -> None:
+    from scrapers.cutshort import CutshortScraper
     from scrapers.indeed import IndeedScraper
     from scrapers.instahyre import InstahyreScraper
     from scrapers.linkedin import LinkedInScraper
@@ -221,6 +225,7 @@ async def run_description(platform: str, url: str) -> None:
         "instahyre": InstahyreScraper(),
         "linkedin": LinkedInScraper(),
         "wellfound": WellfoundScraper(),
+        "cutshort": CutshortScraper(),
     }
 
 
