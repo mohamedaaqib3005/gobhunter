@@ -43,6 +43,9 @@ def main() -> None:
             elif "linkedin.com" in arg:
                 platform = "linkedin"
                 url = arg
+            elif "wellfound.com" in arg:
+                platform = "wellfound"
+                url = arg
             else:
                 platform = "naukri"
                 url = arg
@@ -209,6 +212,7 @@ async def run_description(platform: str, url: str) -> None:
     from scrapers.instahyre import InstahyreScraper
     from scrapers.linkedin import LinkedInScraper
     from scrapers.naukri import NaukriScraper
+    from scrapers.wellfound import WellfoundScraper
     from utils.browser import scrape_with_cookies
 
     scraper_map = {
@@ -216,6 +220,7 @@ async def run_description(platform: str, url: str) -> None:
         "naukri": NaukriScraper(),
         "instahyre": InstahyreScraper(),
         "linkedin": LinkedInScraper(),
+        "wellfound": WellfoundScraper(),
     }
 
 
