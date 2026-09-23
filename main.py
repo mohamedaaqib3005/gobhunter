@@ -40,6 +40,9 @@ def main() -> None:
             elif "instahyre.com" in arg:
                 platform = "instahyre"
                 url = arg
+            elif "linkedin.com" in arg:
+                platform = "linkedin"
+                url = arg
             else:
                 platform = "naukri"
                 url = arg
@@ -204,6 +207,7 @@ async def run_fill(job_id: int) -> None:
 async def run_description(platform: str, url: str) -> None:
     from scrapers.indeed import IndeedScraper
     from scrapers.instahyre import InstahyreScraper
+    from scrapers.linkedin import LinkedInScraper
     from scrapers.naukri import NaukriScraper
     from utils.browser import scrape_with_cookies
 
@@ -211,6 +215,7 @@ async def run_description(platform: str, url: str) -> None:
         "indeed": IndeedScraper(),
         "naukri": NaukriScraper(),
         "instahyre": InstahyreScraper(),
+        "linkedin": LinkedInScraper(),
     }
 
 
