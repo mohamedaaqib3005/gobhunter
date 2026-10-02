@@ -106,67 +106,90 @@ def print_cookie_instructions() -> None:
 
 async def run_scrape() -> None:
     from config import settings
-    from database import deduplicate_jobs, migrate_source_urls
+    from database import (
+        deduplicate_jobs,
+        migrate_source_urls,
+        record_scrape_finish,
+        record_scrape_start,
+    )
 
-    migrated = migrate_source_urls()
-    if migrated:
-        print(f"[cleanup] Normalized {migrated} source URLs")
-    deleted = deduplicate_jobs()
-    if deleted:
-        print(f"[cleanup] Deleted {deleted} duplicate jobs")
-    from scrapers.indeed import IndeedScraper
-    from scrapers.naukri import NaukriScraper
-    from scrapers.cutshort import CutshortScraper
-    from scrapers.instahyre import InstahyreScraper
-    from scrapers.linkedin import LinkedInScraper
-    from scrapers.wellfound import WellfoundScraper
-    from utils.browser import scrape_with_cookies
+    run_id = record_scrape_start()
+    total_found = 0
+    total_saved = 0
+    errors = []
 
-    scraper_map = {
-        "indeed": IndeedScraper(),
-        "naukri": NaukriScraper(),
-        "cutshort": CutshortScraper(),
-        "instahyre": InstahyreScraper(),
-        "linkedin": LinkedInScraper(),
-        "wellfound": WellfoundScraper(),
-    }
+    try:
+        migrated = migrate_source_urls()
+        if migrated:
+            print(f"[cleanup] Normalized {migrated} source URLs")
+        deleted = deduplicate_jobs()
+        if deleted:
+            print(f"[cleanup] Deleted {deleted} duplicate jobs")
+        from scrapers.indeed import IndeedScraper
+        from scrapers.naukri import NaukriScraper
+        from scrapers.cutshort import CutshortScraper
+        from scrapers.instahyre import InstahyreScraper
+        from scrapers.linkedin import LinkedInScraper
+        from scrapers.wellfound import WellfoundScraper
+        from utils.browser import scrape_with_cookies
 
-    for name, scraper in scraper_map.items():
-        info = SITES[name]
-        cookie_file = COOKIES_DIR / f"{name}.json"
-        cookies = json.loads(cookie_file.read_text()) if cookie_file.exists() else []
+        scraper_map = {
+            "indeed": IndeedScraper(),
+            "naukri": NaukriScraper(),
+            "cutshort": CutshortScraper(),
+            "instahyre": InstahyreScraper(),
+            "linkedin": LinkedInScraper(),
+            "wellfound": WellfoundScraper(),
+        }
 
-        if info["status"] == "cookies" and not cookies:
-            print(f"[{name}] Requires cookies. Run 'python main.py cookies' for setup.")
-            continue
+        for name, scraper in scraper_map.items():
+            info = SITES[name]
+            cookie_file = COOKIES_DIR / f"{name}.json"
+            cookies = json.loads(cookie_file.read_text()) if cookie_file.exists() else []
 
-        print(f"[{name}] {'Cookies loaded' if cookies else 'Scraping public listings'}...")
-
-        async def search(page):
-            return await scraper.search(page, settings.search_query, settings.search_locations)
-
-
-        try:
-            jobs = await scrape_with_cookies(scraper.login_url, search, cookies)
-            if jobs is None:
-                print(f"[{name}] Skipped (blocked)")
+            if info["status"] == "cookies" and not cookies:
+                print(f"[{name}] Requires cookies. Run 'python main.py cookies' for setup.")
                 continue
-            print(f"[{name}] Found {len(jobs)} jobs")
-            saved = 0
-            for job_data in jobs:
-                from config import is_relevant_title
-                from database import insert_job, job_exists, job_exists_by_content
-                from models import Job
-                if not is_relevant_title(job_data["title"]):
+
+            print(f"[{name}] {'Cookies loaded' if cookies else 'Scraping public listings'}...")
+
+            async def search(page):
+                return await scraper.search(page, settings.search_query, settings.search_locations)
+
+            try:
+                jobs = await scrape_with_cookies(scraper.login_url, search, cookies)
+                if jobs is None:
+                    print(f"[{name}] Skipped (blocked)")
                     continue
-                if not job_exists(job_data["source_url"], job_data["source"]) \
-                   and not job_exists_by_content(job_data["title"], job_data["company"], job_data["location"], job_data["source"]):
-                    job = Job(**job_data)
-                    insert_job(job)
-                    saved += 1
-            print(f"[{name}] Saved {saved} new jobs")
-        except Exception as e:
-            print(f"[{name}] Error: {e}")
+                print(f"[{name}] Found {len(jobs)} jobs")
+                total_found += len(jobs)
+                saved = 0
+                for job_data in jobs:
+                    from config import is_relevant_title
+                    from database import insert_job, job_exists, job_exists_by_content
+                    from models import Job
+                    if not is_relevant_title(job_data["title"]):
+                        continue
+                    if not job_exists(job_data["source_url"], job_data["source"]) \
+                       and not job_exists_by_content(job_data["title"], job_data["company"], job_data["location"], job_data["source"]):
+                        job = Job(**job_data)
+                        insert_job(job)
+                        saved += 1
+                total_saved += saved
+                print(f"[{name}] Saved {saved} new jobs")
+            except Exception as e:
+                print(f"[{name}] Error: {e}")
+                errors.append(f"{name}: {e}")
+
+        status = "completed" if not errors or total_saved > 0 or total_found > 0 else "failed"
+        msg = f"Saved {total_saved} jobs (found {total_found})"
+        if errors:
+            msg += f" with warnings: {'; '.join(errors)}"
+        record_scrape_finish(run_id, status=status, jobs_found=total_found, jobs_saved=total_saved, message=msg)
+    except Exception as e:
+        print(f"[scrape] Fatal error: {e}")
+        record_scrape_finish(run_id, status="failed", jobs_found=total_found, jobs_saved=total_saved, message=str(e))
+        raise
 
 
 async def run_fill(job_id: int) -> None:

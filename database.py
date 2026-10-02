@@ -44,8 +44,111 @@ def init_db() -> None:
     conn.execute("""
         CREATE INDEX IF NOT EXISTS idx_jobs_source ON jobs(source)
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS scrape_runs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            status TEXT NOT NULL,
+            started_at TEXT NOT NULL,
+            finished_at TEXT,
+            jobs_found INTEGER DEFAULT 0,
+            jobs_saved INTEGER DEFAULT 0,
+            message TEXT
+        )
+    """)
     conn.commit()
     conn.close()
+
+
+def record_scrape_start() -> int:
+    init_db()
+    conn = get_conn()
+    now = datetime.now(timezone.utc).isoformat()
+    # Mark old 'running' runs as interrupted
+    conn.execute(
+        "UPDATE scrape_runs SET status = 'interrupted', finished_at = ? WHERE status = 'running'",
+        (now,),
+    )
+    cursor = conn.execute(
+        "INSERT INTO scrape_runs (status, started_at) VALUES ('running', ?)",
+        (now,),
+    )
+    run_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return run_id
+
+
+def record_scrape_finish(
+    run_id: int,
+    status: str = "completed",
+    jobs_found: int = 0,
+    jobs_saved: int = 0,
+    message: str = "",
+) -> None:
+    conn = get_conn()
+    now = datetime.now(timezone.utc).isoformat()
+    conn.execute(
+        """UPDATE scrape_runs
+           SET status = ?, finished_at = ?, jobs_found = ?, jobs_saved = ?, message = ?
+           WHERE id = ?""",
+        (status, now, jobs_found, jobs_saved, message, run_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_last_scrape_run() -> dict | None:
+    init_db()
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT * FROM scrape_runs ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+    if row:
+        res = {
+            "id": row["id"],
+            "status": row["status"],
+            "started_at": row["started_at"],
+            "finished_at": row["finished_at"],
+            "jobs_found": row["jobs_found"],
+            "jobs_saved": row["jobs_saved"],
+            "message": row["message"],
+        }
+        conn.close()
+        return res
+
+    fallback_row = conn.execute("SELECT MAX(updated_at) as last_update FROM jobs").fetchone()
+    conn.close()
+    if fallback_row and fallback_row["last_update"]:
+        return {
+            "id": None,
+            "status": "completed",
+            "started_at": fallback_row["last_update"],
+            "finished_at": fallback_row["last_update"],
+            "jobs_found": 0,
+            "jobs_saved": 0,
+            "message": "Initial import",
+        }
+    return None
+
+
+def is_scrape_running() -> bool:
+    init_db()
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT id, started_at FROM scrape_runs WHERE status = 'running' ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+    conn.close()
+    if not row:
+        return False
+    try:
+        started = datetime.fromisoformat(row["started_at"])
+        elapsed = (datetime.now(timezone.utc) - started).total_seconds()
+        if elapsed > 1800:
+            return False
+    except Exception:
+        pass
+    return True
+
 
 
 def normalize_source_url(url: str, source: str = "") -> str:

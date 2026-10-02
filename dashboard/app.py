@@ -7,7 +7,14 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from config import is_relevant_title
-from database import get_job, get_jobs, get_stats, update_job_status
+from database import (
+    get_job,
+    get_jobs,
+    get_last_scrape_run,
+    get_stats,
+    is_scrape_running,
+    update_job_status,
+)
 from models import Job, JobStatus, JobStatusUpdate
 
 tags_metadata = [
@@ -22,6 +29,10 @@ tags_metadata = [
     {
         "name": "Job Actions API",
         "description": "REST API endpoints for updating status and triggering auto-fill tasks.",
+    },
+    {
+        "name": "Scraper API",
+        "description": "REST API endpoints for manually triggering job scrapers and monitoring scraping status.",
     },
     {
         "name": "Stats API",
@@ -66,9 +77,13 @@ async def index(
     filter_relevant = relevant != "all"
     jobs = get_jobs(source=filter_source, status=filter_status, relevant=filter_relevant)
     stats = get_stats()
+    last_scrape = get_last_scrape_run()
+    is_scraping = is_scrape_running()
     return templates.TemplateResponse(request, "index.html", {
         "jobs": jobs,
         "stats": stats,
+        "last_scrape": last_scrape,
+        "is_scraping": is_scraping,
         "current_source": source or "all",
         "current_status": status or "all",
         "current_relevant": relevant or "true",
@@ -235,3 +250,45 @@ async def api_trigger_fill(job_id: int):
 )
 async def api_get_stats():
     return get_stats()
+
+
+@app.post(
+    "/api/scrape",
+    tags=["Scraper API"],
+    summary="Trigger Manual Scraping (JSON)",
+    description="Launch background job scraper subprocess if not currently running.",
+)
+async def api_trigger_scrape():
+    if is_scrape_running():
+        return {
+            "status": "already_running",
+            "message": "Scraper is already running in background.",
+            "is_running": True,
+        }
+
+    project_root = Path(__file__).parent.parent
+    subprocess.Popen(
+        [sys.executable, "main.py", "scrape"],
+        cwd=str(project_root),
+    )
+    return {
+        "status": "started",
+        "message": "Scraping process initiated.",
+        "is_running": True,
+    }
+
+
+@app.get(
+    "/api/scrape/status",
+    tags=["Scraper API"],
+    summary="Get Scraper Status (JSON)",
+    description="Retrieve current running status and details of the latest scrape execution.",
+)
+async def api_get_scrape_status():
+    last_run = get_last_scrape_run()
+    running = is_scrape_running()
+    return {
+        "is_running": running,
+        "last_run": last_run,
+    }
+
