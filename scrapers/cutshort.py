@@ -95,7 +95,6 @@ class CutshortScraper(BaseScraper):
             except Exception:
                 pass
 
-        loop = asyncio.get_event_loop()
         try:
             def _req():
                 r = urllib.request.Request(url, headers=self.headers)
@@ -103,7 +102,7 @@ class CutshortScraper(BaseScraper):
                     if resp.status == 200:
                         return json.loads(resp.read().decode("utf-8"))
                 return None
-            return await loop.run_in_executor(None, _req)
+            return await asyncio.to_thread(_req)
         except Exception:
             return None
 

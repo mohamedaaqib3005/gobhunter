@@ -63,7 +63,6 @@ class InstahyreScraper(BaseScraper):
                 pass
 
         # Fallback to direct async HTTP request
-        loop = asyncio.get_event_loop()
         try:
             def _fetch():
                 req = urllib.request.Request(url, headers=self.headers)
@@ -72,7 +71,7 @@ class InstahyreScraper(BaseScraper):
                         return json.loads(resp.read().decode("utf-8"))
                 return None
 
-            return await loop.run_in_executor(None, _fetch)
+            return await asyncio.to_thread(_fetch)
         except Exception:
             return None
 

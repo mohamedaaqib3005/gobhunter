@@ -182,7 +182,6 @@ class LinkedInScraper(BaseScraper):
         # 1. Try fast guest jobPosting endpoint
         if job_id:
             api_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
-            loop = asyncio.get_event_loop()
             try:
                 def _fetch():
                     req = urllib.request.Request(api_url, headers=self.headers)
@@ -191,7 +190,7 @@ class LinkedInScraper(BaseScraper):
                             return resp.read().decode("utf-8")
                     return None
 
-                html = await loop.run_in_executor(None, _fetch)
+                html = await asyncio.to_thread(_fetch)
                 if html:
                     t_match = re.search(r'<h[12][^>]*class=[\"\'][^\"\']*(?:top-card-layout__title|topcard__title)[^\"\']*[\"\'][^>]*>(.*?)</h[12]>', html, re.DOTALL)
                     title = re.sub(r'<[^>]+>', '', t_match.group(1)).strip() if t_match else None

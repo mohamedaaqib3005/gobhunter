@@ -81,7 +81,9 @@ class Settings(BaseSettings):
         "I have experience with Python, FastAPI, Django, and databases."
     )
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    shapeshifter_url: str = ""
+
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
 settings = Settings()
