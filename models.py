@@ -38,3 +38,9 @@ class JobStatusUpdate(BaseModel):
     status: JobStatus
     notes: str | None = None
 
+
+class JobDescriptionRequest(BaseModel):
+    url: str
+    platform: str | None = None
+
+

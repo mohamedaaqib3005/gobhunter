@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Query, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from config import is_relevant_title
@@ -15,7 +15,8 @@ from database import (
     is_scrape_running,
     update_job_status,
 )
-from models import Job, JobStatus, JobStatusUpdate
+from models import Job, JobDescriptionRequest, JobStatus, JobStatusUpdate
+from utils.description import get_job_description_formatted
 
 tags_metadata = [
     {
@@ -29,6 +30,10 @@ tags_metadata = [
     {
         "name": "Job Actions API",
         "description": "REST API endpoints for updating status and triggering auto-fill tasks.",
+    },
+    {
+        "name": "Job Description API",
+        "description": "Endpoints to scrape and fetch formatted job descriptions in plain text.",
     },
     {
         "name": "Scraper API",
@@ -291,4 +296,58 @@ async def api_get_scrape_status():
         "is_running": running,
         "last_run": last_run,
     }
+
+
+# ==========================================
+# Job Description Plain Text API Endpoints
+# ==========================================
+
+@app.get(
+    "/api/description",
+    response_class=PlainTextResponse,
+    tags=["Job Description API"],
+    summary="Get Formatted Job Description (Plain Text)",
+    description="Fetch and format job details and description directly from a job URL and platform in plain text format.",
+)
+@app.get(
+    "/api/job/description",
+    response_class=PlainTextResponse,
+    tags=["Job Description API"],
+    include_in_schema=False,
+)
+async def api_get_job_description(
+    url: str = Query(..., description="Job posting URL to scrape"),
+    platform: str | None = Query(None, description="Platform name (indeed, naukri, instahyre, cutshort, linkedin, wellfound). Auto-detected if omitted."),
+):
+    try:
+        return await get_job_description_formatted(url=url, platform=platform)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to fetch job description: {str(e)}")
+
+
+@app.post(
+    "/api/description",
+    response_class=PlainTextResponse,
+    tags=["Job Description API"],
+    summary="Get Formatted Job Description via POST (Plain Text)",
+    description="Fetch and format job details and description directly from a job URL and platform in plain text format.",
+)
+@app.post(
+    "/api/job/description",
+    response_class=PlainTextResponse,
+    tags=["Job Description API"],
+    include_in_schema=False,
+)
+async def api_post_job_description(
+    payload: JobDescriptionRequest,
+):
+    try:
+        return await get_job_description_formatted(url=payload.url, platform=payload.platform)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to fetch job description: {str(e)}")
+
 

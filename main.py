@@ -219,64 +219,15 @@ async def run_fill(job_id: int) -> None:
 
 
 async def run_description(platform: str, url: str) -> None:
-    from scrapers.cutshort import CutshortScraper
-    from scrapers.indeed import IndeedScraper
-    from scrapers.instahyre import InstahyreScraper
-    from scrapers.linkedin import LinkedInScraper
-    from scrapers.naukri import NaukriScraper
-    from scrapers.wellfound import WellfoundScraper
-    from utils.browser import scrape_with_cookies
-
-    scraper_map = {
-        "indeed": IndeedScraper(),
-        "naukri": NaukriScraper(),
-        "instahyre": InstahyreScraper(),
-        "linkedin": LinkedInScraper(),
-        "wellfound": WellfoundScraper(),
-        "cutshort": CutshortScraper(),
-    }
-
-
-    if platform not in scraper_map:
-        print(f"Unsupported platform: '{platform}'. Supported platforms: {', '.join(scraper_map.keys())}")
-        return
-
-    scraper = scraper_map[platform]
-    cookie_file = COOKIES_DIR / f"{platform}.json"
-    cookies = json.loads(cookie_file.read_text()) if cookie_file.exists() else []
-
-    async def fetch(page):
-        return await scraper.get_job_details(page, url)
+    from utils.description import get_job_description_formatted
 
     print(f"[{platform}] Fetching job details from: {url}")
-    details = await scrape_with_cookies(url, fetch, cookies)
+    try:
+        formatted = await get_job_description_formatted(url=url, platform=platform)
+        print("\n" + formatted)
+    except Exception as e:
+        print(f"Failed to fetch job details: {e}")
 
-    if not details:
-        print(f"Failed to fetch job details from {platform}.")
-        return
-
-    print("\n" + "=" * 60)
-    print(f"JOB DETAILS ({platform.upper()})")
-    print("=" * 60)
-    if details.get("title"):
-        print(f"Title:       {details['title']}")
-    if details.get("company"):
-        print(f"Company:     {details['company']}")
-    if details.get("location"):
-        print(f"Location:    {details['location']}")
-    if details.get("salary_range"):
-        print(f"Salary:      {details['salary_range']}")
-    if details.get("key_skills"):
-        print(f"Key Skills:  {', '.join(details['key_skills'])}")
-    print("-" * 60)
-    print("DESCRIPTION:")
-    print("-" * 60)
-    desc = details.get("description")
-    if desc:
-        print(desc)
-    else:
-        print("No description extracted or description element not found.")
-    print("=" * 60)
 
 
 

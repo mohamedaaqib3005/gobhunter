@@ -30,16 +30,18 @@ def _extract_job_key(url: str) -> str | None:
     if not url:
         return None
     url = str(url).strip()
-    m = re.search(r"[?&]jk=([a-zA-Z0-9]+)", url)
+    url = re.sub(r"\\([?&=/])", r"\1", url)
+    m = re.search(r"(?:[?&]|\b)jk=([a-zA-Z0-9]+)", url)
     if m:
         return m.group(1)
     m = re.search(r"/viewjob/([a-zA-Z0-9]+)", url)
     if m:
         return m.group(1)
-    m = re.search(r"jobkey=([a-zA-Z0-9]+)", url)
+    m = re.search(r"(?:[?&]|\b)jobkey=([a-zA-Z0-9]+)", url)
     if m:
         return m.group(1)
     return None
+
 
 
 class IndeedScraper(BaseScraper):
