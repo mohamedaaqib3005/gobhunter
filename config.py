@@ -81,7 +81,11 @@ class Settings(BaseSettings):
         "I have experience with Python, FastAPI, Django, and databases."
     )
 
-    shapeshifter_url: str = ""
+    shapeshifter_url: str = "http://localhost:3001"
+    shapeshifter_user_id: str = "default"
+    shapeshifter_template: str = "modern"
+    shapeshifter_callback_url: str = ""
+    profile_path: str = "profile.md"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
