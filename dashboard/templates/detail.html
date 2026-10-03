@@ -13,15 +13,23 @@
         .company { font-size: 16px; color: #666; margin-bottom: 16px; }
         .meta { display: flex; gap: 16px; margin-bottom: 20px; font-size: 14px; color: #888; flex-wrap: wrap; }
         .meta span { display: flex; align-items: center; gap: 4px; }
-        .description { line-height: 1.6; margin-bottom: 24px; white-space: pre-wrap; font-size: 14px; }
+        .description-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .description-title { font-size: 16px; font-weight: 600; color: #222; }
+        .description { line-height: 1.6; margin-bottom: 24px; white-space: pre-wrap; font-size: 14px; background: #fafafa; border: 1px solid #eee; border-radius: 6px; padding: 16px; }
         .actions { display: flex; gap: 8px; flex-wrap: wrap; }
         .actions form { display: inline; }
-        .btn { padding: 8px 16px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: 500; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }
         .btn-primary { background: #1a73e8; color: #fff; }
         .btn-success { background: #2e7d32; color: #fff; }
         .btn-danger { background: #c62828; color: #fff; }
         .btn-secondary { background: #eee; color: #333; }
-        .btn:hover { opacity: 0.9; }
+        .btn-fetch { background: #e8f0fe; color: #174ea6; border: 1px solid #c2e7ff; font-weight: 600; }
+        .btn-fetch:hover:not(:disabled) { background: #d2e3fc; }
+        .btn:hover:not(:disabled) { opacity: 0.9; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-resume { background: #0f9d58; color: #fff; text-decoration: none; font-weight: 600; }
+        .btn-resume:hover { background: #0b8043; color: #fff; }
+        
         .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-bottom: 16px; }
         .badge-new { background: #e3f2fd; color: #1565c0; }
         .badge-applied { background: #e8f5e9; color: #2e7d32; }
@@ -31,28 +39,171 @@
         .badge-closed { background: #eceff1; color: #546e7a; }
         .badge-dismissed { background: #f5f5f5; color: #999; }
         .badge-irrelevant { background: #fce4ec; color: #c62828; }
+        .badge-failed { background: #fce4ec; color: #c62828; }
+        .badge-queued, .badge-processing { background: #e0f2fe; color: #0369a1; }
+        .badge-succeeded { background: #dcfce7; color: #15803d; }
+        .badge-none { background: #f1f5f9; color: #64748b; }
         a.external { color: #1a73e8; }
+        
+        .resume-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .resume-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .resume-title-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .resume-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        .resume-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(23, 78, 166, 0.25);
+            border-radius: 50%;
+            border-top-color: #174ea6;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .feedback-box {
+            padding: 10px 14px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            font-weight: 500;
+            display: none;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+        .feedback-info {
+            background: #e8f0fe;
+            border: 1px solid #c2e7ff;
+            color: #174ea6;
+        }
+        .feedback-success {
+            background: #e6f4ea;
+            border: 1px solid #ceead6;
+            color: #137333;
+        }
+        .feedback-error {
+            background: #fce8e6;
+            border: 1px solid #fad2cf;
+            color: #c5221f;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-3px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
-<body>
+<body data-job-id="{{ job.id }}" data-resume-status="{{ job.resume_status or 'none' }}" data-has-resume="{{ 'true' if (job.resume_path and job.resume_status == 'succeeded') else 'false' }}">
     <a href="/?source={{ back_source }}&status={{ back_status }}&relevant={{ back_relevant }}" class="back">&larr; Back to list</a>
     <div class="card">
         <span class="badge badge-{{ job.status.value }}">{{ job.status.value }}</span>
         {% if job.title|relevant %}<span class="badge badge-new">Relevant</span>{% else %}<span class="badge badge-irrelevant">Not relevant</span>{% endif %}
         <h1>{{ job.title }}</h1>
         <div class="company">{{ job.company }}</div>
-        <div class="meta">
-            <span>{{ job.location }}</span>
-            <span>{{ job.source }}</span>
-            {% if job.salary_range %}<span>{{ job.salary_range }}</span>{% endif %}
-            {% if job.posted_date %}<span>Posted: {{ job.posted_date }}</span>{% endif %}
+        <div class="meta" id="job-meta">
+            <span>📍 {{ job.location }}</span>
+            <span>🌐 {{ job.source }}</span>
+            {% if job.salary_range %}<span id="salary-badge">💰 {{ job.salary_range }}</span>{% endif %}
+            {% if job.posted_date %}<span>📅 Posted: {{ job.posted_date }}</span>{% endif %}
         </div>
-        {% if job.description %}
-        <div class="description">{{ job.description }}</div>
-        {% endif %}
+
+        <!-- Shapeshifter Custom Resume Section -->
+        <div class="resume-card" id="resume-container">
+            <div class="resume-header">
+                <div class="resume-title-group">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0f9d58" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <span class="resume-title">Tailored Resume (Shapeshifter)</span>
+                    <span id="resume-status-badge" class="badge badge-{{ job.resume_status or 'none' }}">
+                        {% if job.resume_status == 'succeeded' and job.resume_path %}Ready
+                        {% elif job.resume_status in ['queued', 'processing'] %}Generating...
+                        {% elif job.resume_status == 'failed' %}Failed
+                        {% else %}Not generated{% endif %}
+                    </span>
+                </div>
+                <div class="resume-actions" id="resume-actions-group">
+                    <!-- Download button (visible if ready) -->
+                    <a id="btn-download-resume" href="/job/{{ job.id }}/resume" class="btn btn-resume" style="display: {{ 'inline-flex' if (job.resume_status == 'succeeded' and job.resume_path) else 'none' }};">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        <span>Download Resume (PDF)</span>
+                    </a>
+
+                    <!-- Generate / Regenerate button -->
+                    <button id="btn-generate-resume" class="btn btn-fetch" onclick="triggerResumeGeneration({{ job.id }})">
+                        <svg id="resume-btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+                        </svg>
+                        <span id="resume-btn-spinner" class="spinner" style="display: none;"></span>
+                        <span id="resume-btn-text">
+                            {% if job.resume_status == 'succeeded' and job.resume_path %}Regenerate Resume
+                            {% elif job.resume_status in ['queued', 'processing'] %}Generating Resume...
+                            {% else %}Tailor Resume with Shapeshifter{% endif %}
+                        </span>
+                    </button>
+                </div>
+            </div>
+            <div id="resume-feedback" class="feedback-box"></div>
+        </div>
+
+        <div class="description-header">
+            <div class="description-title">Job Description</div>
+            <button id="fetch-desc-btn" class="btn btn-fetch" onclick="fetchDescription({{ job.id }})">
+                <svg id="fetch-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span id="fetch-spinner" class="spinner" style="display: none;"></span>
+                <span id="fetch-btn-text">{% if job.description %}Refresh Description{% else %}Fetch Description{% endif %}</span>
+            </button>
+        </div>
+
+        <div id="fetch-feedback" class="feedback-box"></div>
+
+        <div id="job-description" class="description">{{ job.description if job.description else "No description available. Click 'Fetch Description' above to fetch it directly from " ~ job.source ~ "." }}</div>
+
         <p style="margin-bottom:16px;">
             <a href="{{ job.source_url }}" target="_blank" class="external">View original listing &rarr;</a>
         </p>
+
         <div class="actions">
             <form action="/job/{{ job.id }}/fill" method="post">
                 <input type="hidden" name="source" value="{{ back_source }}">
@@ -60,6 +211,7 @@
                 <input type="hidden" name="relevant" value="{{ back_relevant }}">
                 <button class="btn btn-primary">Pre-fill Application</button>
             </form>
+
             <form action="/job/{{ job.id }}/status" method="post">
                 <input type="hidden" name="source" value="{{ back_source }}">
                 <input type="hidden" name="cur_status" value="{{ back_status }}">
@@ -97,5 +249,190 @@
             </form>
         </div>
     </div>
+
+    <script>
+        let resumePollInterval = null;
+
+        async function fetchDescription(jobId) {
+            const btn = document.getElementById('fetch-desc-btn');
+            const btnText = document.getElementById('fetch-btn-text');
+            const spinner = document.getElementById('fetch-spinner');
+            const icon = document.getElementById('fetch-icon');
+            const feedback = document.getElementById('fetch-feedback');
+            const descEl = document.getElementById('job-description');
+
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+            icon.style.display = 'none';
+            btnText.textContent = 'Fetching description...';
+
+            feedback.className = 'feedback-box feedback-info';
+            feedback.style.display = 'block';
+            feedback.textContent = 'Fetching job description from {{ job.source }}... This may take a few moments.';
+
+            try {
+                const response = await fetch(`/api/jobs/${jobId}/fetch-description`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+
+                if (response.ok && data.status === 'success') {
+                    descEl.textContent = data.description || 'No description extracted.';
+                    feedback.className = 'feedback-box feedback-success';
+                    feedback.textContent = '✓ Description fetched and stored in database successfully!';
+                    btnText.textContent = 'Refresh Description';
+
+                    if (data.salary_range) {
+                        let salBadge = document.getElementById('salary-badge');
+                        if (!salBadge) {
+                            salBadge = document.createElement('span');
+                            salBadge.id = 'salary-badge';
+                            document.getElementById('job-meta').appendChild(salBadge);
+                        }
+                        salBadge.textContent = '💰 ' + data.salary_range;
+                    }
+                } else {
+                    feedback.className = 'feedback-box feedback-error';
+                    feedback.textContent = '✕ ' + (data.detail || data.message || 'Failed to fetch description.');
+                    btnText.textContent = 'Retry Fetch Description';
+                }
+            } catch (err) {
+                feedback.className = 'feedback-box feedback-error';
+                feedback.textContent = '✕ Network error: ' + err.message;
+                btnText.textContent = 'Retry Fetch Description';
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+                icon.style.display = 'inline-block';
+            }
+        }
+
+        async function triggerResumeGeneration(jobId) {
+            const btn = document.getElementById('btn-generate-resume');
+            const btnText = document.getElementById('resume-btn-text');
+            const spinner = document.getElementById('resume-btn-spinner');
+            const icon = document.getElementById('resume-btn-icon');
+            const feedback = document.getElementById('resume-feedback');
+            const badge = document.getElementById('resume-status-badge');
+
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+            icon.style.display = 'none';
+            btnText.textContent = 'Submitting to Shapeshifter...';
+
+            badge.className = 'badge badge-queued';
+            badge.textContent = 'Queued';
+
+            feedback.className = 'feedback-box feedback-info';
+            feedback.style.display = 'block';
+            feedback.textContent = 'Submitting candidate profile and job description to Shapeshifter...';
+
+            try {
+                const response = await fetch(`/api/jobs/${jobId}/resume/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ template: 'modern' })
+                });
+                const data = await response.json();
+
+                if (response.ok && data.status === 'success') {
+                    feedback.textContent = '⏳ Tailoring resume in background via Shapeshifter... Polling for result.';
+                    btnText.textContent = 'Generating Resume...';
+                    startResumePolling(jobId);
+                } else {
+                    feedback.className = 'feedback-box feedback-error';
+                    feedback.textContent = '✕ ' + (data.detail || data.message || 'Failed to submit resume job.');
+                    badge.className = 'badge badge-failed';
+                    badge.textContent = 'Failed';
+                    btn.disabled = false;
+                    spinner.style.display = 'none';
+                    icon.style.display = 'inline-block';
+                    btnText.textContent = 'Retry Tailor Resume';
+                }
+            } catch (err) {
+                feedback.className = 'feedback-box feedback-error';
+                feedback.textContent = '✕ Error: ' + err.message;
+                badge.className = 'badge badge-failed';
+                badge.textContent = 'Failed';
+                btn.disabled = false;
+                spinner.style.display = 'none';
+                icon.style.display = 'inline-block';
+                btnText.textContent = 'Retry Tailor Resume';
+            }
+        }
+
+        function startResumePolling(jobId) {
+            if (resumePollInterval) clearInterval(resumePollInterval);
+            resumePollInterval = setInterval(() => checkResumeStatus(jobId), 2500);
+        }
+
+        async function checkResumeStatus(jobId) {
+            try {
+                const res = await fetch(`/api/jobs/${jobId}/resume/status`);
+                const data = await res.json();
+                const badge = document.getElementById('resume-status-badge');
+                const btnDownload = document.getElementById('btn-download-resume');
+                const btnGen = document.getElementById('btn-generate-resume');
+                const btnText = document.getElementById('resume-btn-text');
+                const spinner = document.getElementById('resume-btn-spinner');
+                const icon = document.getElementById('resume-btn-icon');
+                const feedback = document.getElementById('resume-feedback');
+
+                if (data.has_resume || data.resume_status === 'succeeded') {
+                    clearInterval(resumePollInterval);
+                    resumePollInterval = null;
+
+                    badge.className = 'badge badge-succeeded';
+                    badge.textContent = 'Ready';
+
+                    btnDownload.style.display = 'inline-flex';
+                    btnDownload.href = data.download_url || `/job/${jobId}/resume`;
+
+                    btnGen.disabled = false;
+                    spinner.style.display = 'none';
+                    icon.style.display = 'inline-block';
+                    btnText.textContent = 'Regenerate Resume';
+
+                    feedback.className = 'feedback-box feedback-success';
+                    feedback.style.display = 'block';
+                    feedback.textContent = '✓ Tailored resume is ready! Click "Download Resume (PDF)" to download.';
+                } else if (data.resume_status === 'failed') {
+                    clearInterval(resumePollInterval);
+                    resumePollInterval = null;
+
+                    badge.className = 'badge badge-failed';
+                    badge.textContent = 'Failed';
+
+                    btnGen.disabled = false;
+                    spinner.style.display = 'none';
+                    icon.style.display = 'inline-block';
+                    btnText.textContent = 'Retry Tailor Resume';
+
+                    feedback.className = 'feedback-box feedback-error';
+                    feedback.style.display = 'block';
+                    feedback.textContent = '✕ Resume generation failed on Shapeshifter. Please check logs or retry.';
+                }
+            } catch (err) {
+                console.error("Resume status poll error:", err);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const initialStatus = document.body.dataset.resumeStatus;
+            const hasResume = document.body.dataset.hasResume === 'true';
+            const jobId = document.body.dataset.jobId;
+
+            if (jobId && (initialStatus === 'queued' || initialStatus === 'processing') && !hasResume) {
+                const btnGen = document.getElementById('btn-generate-resume');
+                const spinner = document.getElementById('resume-btn-spinner');
+                const icon = document.getElementById('resume-btn-icon');
+                btnGen.disabled = true;
+                spinner.style.display = 'inline-block';
+                icon.style.display = 'none';
+                startResumePolling(jobId);
+            }
+        });
+    </script>
 </body>
 </html>

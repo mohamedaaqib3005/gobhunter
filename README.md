@@ -6,7 +6,7 @@ Scrapes job listings from multiple sites, stores them in a local database, provi
 
 ## Features
 
-- **Scrape** — collects jobs from Indeed, Naukri, Shine, TimesJobs, Cutshort, Instahyre, LinkedIn, and Wellfound
+- **Scrape** — collects jobs from Indeed, Naukri, Cutshort, Instahyre, LinkedIn, and Wellfound
 - **Filter** — keeps only relevant titles based on configurable keywords (include/exclude)
 - **Deduplicate** — merges identical listings across sources
 - **Track** — web dashboard at `localhost:8765` to browse, filter, and update job status (new / applied / rejected / bookmarked / dismissed)
@@ -60,19 +60,19 @@ All configuration is done through the `.env` file (copy from `.env.example`).
 
 ### Search Settings
 
-| Variable | Default | Description |
-|---|---|---|
-| `SEARCH_QUERY` | `Python Backend Developer` | Job search query sent to each site |
+| Variable           | Default                      | Description                         |
+| ------------------ | ---------------------------- | ----------------------------------- |
+| `SEARCH_QUERY`     | `Python Backend Developer`   | Job search query sent to each site  |
 | `SEARCH_LOCATIONS` | `Bangalore,Bengaluru,Remote` | Comma-separated cities to search in |
 
 ### Title Relevance Filters
 
 Jobs whose titles don't match your include criteria are automatically skipped during scraping and can be cleaned up later with `python main.py cleanup`.
 
-| Variable | Default | Description |
-|---|---|---|
+| Variable           | Default                            | Description                                                                                       |
+| ------------------ | ---------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `INCLUDE_KEYWORDS` | `Python,Backend,Software Engineer` | Comma-separated keywords — a title is relevant if it contains **any** of these (case-insensitive) |
-| `EXCLUDE_KEYWORDS` | _(empty)_ | Comma-separated keywords to exclude (in addition to built-in excludes below) |
+| `EXCLUDE_KEYWORDS` | _(empty)_                          | Comma-separated keywords to exclude (in addition to built-in excludes below)                      |
 
 **Built-in excludes** (always applied): `Senior`, `Sr`, `Staff`, `Principal`, `Lead`, and level indicators `2`-`9`, `II`, `III`, `IV`, `V`.
 
@@ -80,23 +80,23 @@ Jobs whose titles don't match your include criteria are automatically skipped du
 
 ### Auto-Fill Personal Info
 
-| Variable | Description |
-|---|---|
-| `APPLICANT_NAME` | Your full name |
-| `APPLICANT_EMAIL` | Your email address |
-| `APPLICANT_PHONE` | Your phone number |
-| `APPLICANT_LINKEDIN` | LinkedIn profile URL |
-| `APPLICANT_PORTFOLIO` | Portfolio or website URL |
-| `APPLICANT_COVER_LETTER` | Cover letter text |
-| `RESUME_PATH` | Absolute path to your resume PDF |
+| Variable                 | Description                      |
+| ------------------------ | -------------------------------- |
+| `APPLICANT_NAME`         | Your full name                   |
+| `APPLICANT_EMAIL`        | Your email address               |
+| `APPLICANT_PHONE`        | Your phone number                |
+| `APPLICANT_LINKEDIN`     | LinkedIn profile URL             |
+| `APPLICANT_PORTFOLIO`    | Portfolio or website URL         |
+| `APPLICANT_COVER_LETTER` | Cover letter text                |
+| `RESUME_PATH`            | Absolute path to your resume PDF |
 
 ### Browser & Dashboard
 
-| Variable | Default | Description |
-|---|---|---|
-| `BROWSER_LOCALE` | `en-IN` | Playwright browser locale |
+| Variable           | Default        | Description                 |
+| ------------------ | -------------- | --------------------------- |
+| `BROWSER_LOCALE`   | `en-IN`        | Playwright browser locale   |
 | `BROWSER_TIMEZONE` | `Asia/Kolkata` | Playwright browser timezone |
-| `DASHBOARD_PORT` | `8765` | Web dashboard port |
+| `DASHBOARD_PORT`   | `8765`         | Web dashboard port          |
 
 ## Usage
 
@@ -161,8 +161,6 @@ gobhunter/
     base.py            Abstract BaseScraper
     indeed.py
     naukri.py
-    shine.py
-    timesjobs.py
     cutshort.py
     instahyre.py
     linkedin.py

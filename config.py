@@ -1,6 +1,8 @@
 import re
 from pathlib import Path
+from typing import Any
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -44,7 +46,23 @@ class Settings(BaseSettings):
     dashboard_port: int = 8765
 
     search_query: str = "Python Backend Developer"
-    search_locations: list[str] = ["Bangalore", "Bengaluru", "Remote"]
+    search_locations: list[str] | str = ["Bangalore", "Bengaluru", "Remote"]
+
+    @field_validator("search_locations", mode="before")
+    @classmethod
+    def parse_search_locations(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            v = v.strip()
+            if v.startswith("[") and v.endswith("]"):
+                try:
+                    import json
+                    parsed = json.loads(v)
+                    if isinstance(parsed, list):
+                        return [str(item).strip() for item in parsed if str(item).strip()]
+                except Exception:
+                    pass
+            return [loc.strip() for loc in v.split(",") if loc.strip()]
+        return v
 
     include_keywords: str = "Python,Backend,Software Engineer"
     exclude_keywords: str = ""
@@ -63,7 +81,13 @@ class Settings(BaseSettings):
         "I have experience with Python, FastAPI, Django, and databases."
     )
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    shapeshifter_url: str = "http://localhost:3001"
+    shapeshifter_user_id: str = "default"
+    shapeshifter_template: str = "modern"
+    shapeshifter_callback_url: str = ""
+    profile_path: str = "profile.md"
+
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
 settings = Settings()

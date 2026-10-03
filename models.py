@@ -26,9 +26,31 @@ class Job(BaseModel):
     status: JobStatus = JobStatus.NEW
     applied_date: datetime | None = None
     notes: str | None = None
+    resume_path: str | None = None
+    resume_job_id: str | None = None
+    resume_status: str | None = "none"  # none, queued, processing, succeeded, failed
+    resume_meta: str | None = None
+    resume_updated_at: datetime | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
     def dict(self, *args, **kwargs):
         d = super().model_dump(*args, **kwargs)
         return d
+
+
+class JobStatusUpdate(BaseModel):
+    status: JobStatus
+    notes: str | None = None
+
+
+class JobDescriptionRequest(BaseModel):
+    url: str
+    platform: str | None = None
+
+
+class ResumeGenerateRequest(BaseModel):
+    template: str | None = "modern"
+    force_refresh: bool = False
+
+

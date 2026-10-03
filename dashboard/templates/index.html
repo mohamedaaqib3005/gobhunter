@@ -6,7 +6,125 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 24px; }
-        h1 { margin-bottom: 20px; font-size: 24px; }
+        
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .header-container h1 {
+            font-size: 24px;
+            color: #1a1a1a;
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+        .last-updated-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #555;
+            background: #fff;
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            user-select: none;
+        }
+        .last-updated-badge svg {
+            color: #666;
+            flex-shrink: 0;
+        }
+        .last-updated-badge strong {
+            color: #222;
+        }
+        .btn-scrape {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #1a73e8;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, opacity 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        }
+        .btn-scrape:hover:not(:disabled) {
+            background: #1557b0;
+        }
+        .btn-scrape:disabled {
+            background: #8ab4f8;
+            cursor: not-allowed;
+            opacity: 0.85;
+        }
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+        }
+        .banner-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(26, 115, 232, 0.25);
+            border-radius: 50%;
+            border-top-color: #1a73e8;
+            animation: spin 0.8s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .scrape-banner {
+            background: #e8f0fe;
+            border: 1px solid #c2e7ff;
+            color: #174ea6;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            animation: fadeIn 0.25s ease-in-out;
+        }
+        .banner-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .scrape-banner.banner-success {
+            background: #e6f4ea;
+            border-color: #ceead6;
+            color: #137333;
+        }
+        .scrape-banner.banner-error {
+            background: #fce8e6;
+            border-color: #fad2cf;
+            color: #c5221f;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; margin-bottom: 24px; }
         .stat-card { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .stat-card h3 { font-size: 14px; color: #666; margin-bottom: 4px; }
@@ -29,7 +147,57 @@
         .badge-dismissed { background: #f5f5f5; color: #999; }
         .badge-irrelevant { background: #fce4ec; color: #c62828; }
         .source-tag { font-size: 11px; color: #888; }
-        .company { font-weight: 600; }
+        .btn-sm-download {
+            padding: 4px 8px;
+            font-size: 12px;
+            background: #0f9d58;
+            color: #fff !important;
+            border: 1px solid #0b8043;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            text-decoration: none !important;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .btn-sm-download:hover {
+            background: #0b8043;
+            opacity: 0.95;
+        }
+        .btn-sm-resume {
+            padding: 4px 8px;
+            font-size: 12px;
+            background: #f3e8fd;
+            color: #6a1b9a;
+            border: 1px solid #e1bee7;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .btn-sm-resume:hover:not(:disabled) {
+            background: #e8d0fb;
+        }
+        .btn-sm-resume:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .row-spinner {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border: 1.5px solid rgba(23, 78, 166, 0.25);
+            border-radius: 50%;
+            border-top-color: #174ea6;
+            animation: spin 0.8s linear infinite;
+        }
     </style>
     <script>
         function applyFilter() {
@@ -39,10 +207,279 @@
             });
             window.location.search = params.toString();
         }
+
+        let rawLastUpdated = "";
+        let isCurrentlyScraping = false;
+        let pollInterval = null;
+
+        function formatTimeAgo(isoString) {
+            if (!isoString) return "Never";
+            const date = new Date(isoString);
+            if (isNaN(date.getTime())) return isoString;
+            const now = new Date();
+            const diffSec = Math.floor((now - date) / 1000);
+            if (diffSec < 5) return "Just now";
+            if (diffSec < 60) return `${diffSec}s ago`;
+            const diffMin = Math.floor(diffSec / 60);
+            if (diffMin < 60) return `${diffMin}m ago`;
+            const diffHours = Math.floor(diffMin / 60);
+            if (diffHours < 24) return `${diffHours}h ago`;
+            return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function updateLastUpdatedDisplay() {
+            const textEl = document.getElementById("last-updated-text");
+            const containerEl = document.getElementById("last-updated-container");
+            if (!rawLastUpdated) {
+                textEl.textContent = "Never";
+                return;
+            }
+            textEl.textContent = formatTimeAgo(rawLastUpdated);
+            const date = new Date(rawLastUpdated);
+            if (!isNaN(date.getTime())) {
+                containerEl.title = date.toLocaleString();
+            }
+        }
+
+        function setScrapingState(scraping, message) {
+            const btn = document.getElementById("scrape-btn");
+            const btnText = document.getElementById("scrape-btn-text");
+            const spinner = document.getElementById("scrape-spinner");
+            const boltIcon = document.getElementById("scrape-icon-bolt");
+            const banner = document.getElementById("scrape-banner");
+            const bannerMsg = document.getElementById("scrape-banner-message");
+            const bannerSpinner = document.getElementById("scrape-banner-spinner");
+
+            if (scraping) {
+                btn.disabled = true;
+                btnText.textContent = "Scraping...";
+                spinner.style.display = "inline-block";
+                boltIcon.style.display = "none";
+
+                banner.className = "scrape-banner";
+                banner.style.display = "flex";
+                if (bannerSpinner) bannerSpinner.style.display = "inline-block";
+                bannerMsg.textContent = message || "Scraping jobs across portals in background... This may take a moment.";
+            } else {
+                btn.disabled = false;
+                btnText.textContent = "Scrape Jobs";
+                spinner.style.display = "none";
+                boltIcon.style.display = "inline-block";
+            }
+        }
+
+        async function triggerScrape() {
+            setScrapingState(true, "Initiating scraper...");
+            try {
+                const res = await fetch("/api/scrape", { method: "POST" });
+                const data = await res.json();
+                setScrapingState(true, "Scraping job portals in background... Please wait.");
+                startPolling();
+            } catch (err) {
+                console.error("Failed to trigger scrape:", err);
+                setScrapingState(false);
+                showBannerError("Failed to trigger scraper: " + err.message);
+            }
+        }
+
+        function startPolling() {
+            if (pollInterval) clearInterval(pollInterval);
+            pollInterval = setInterval(checkScrapeStatus, 2500);
+        }
+
+        async function checkScrapeStatus() {
+            try {
+                const res = await fetch("/api/scrape/status");
+                const data = await res.json();
+                if (data.last_run) {
+                    if (data.last_run.finished_at) {
+                        rawLastUpdated = data.last_run.finished_at;
+                        updateLastUpdatedDisplay();
+                    }
+                }
+                if (!data.is_running) {
+                    clearInterval(pollInterval);
+                    pollInterval = null;
+                    setScrapingState(false);
+                    
+                    const lastRun = data.last_run;
+                    if (lastRun && lastRun.status === "completed") {
+                        showBannerSuccess(`✓ Scraping completed! Saved ${lastRun.jobs_saved} new jobs (found ${lastRun.jobs_found}). Refreshing...`);
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else if (lastRun && lastRun.status === "failed") {
+                        showBannerError(`Scraping completed with notes: ${lastRun.message || 'Error occurred'}`);
+                    } else {
+                        updateLastUpdatedDisplay();
+                    }
+                }
+            } catch (err) {
+                console.error("Error polling scrape status:", err);
+            }
+        }
+
+        function showBannerSuccess(msg) {
+            const banner = document.getElementById("scrape-banner");
+            const bannerMsg = document.getElementById("scrape-banner-message");
+            const spinner = document.getElementById("scrape-banner-spinner");
+            if (spinner) spinner.style.display = "none";
+            banner.className = "scrape-banner banner-success";
+            banner.style.display = "flex";
+            bannerMsg.textContent = msg;
+        }
+
+        function showBannerError(msg) {
+            const banner = document.getElementById("scrape-banner");
+            const bannerMsg = document.getElementById("scrape-banner-message");
+            const spinner = document.getElementById("scrape-banner-spinner");
+            if (spinner) spinner.style.display = "none";
+            banner.className = "scrape-banner banner-error";
+            banner.style.display = "flex";
+            bannerMsg.textContent = msg;
+        }
+
+        async function fetchJobDesc(jobId, btn) {
+            const textSpan = btn.querySelector('.row-btn-text');
+            const spinner = btn.querySelector('.row-spinner');
+            const descCell = document.getElementById(`desc-cell-${jobId}`);
+
+            btn.disabled = true;
+            if (spinner) spinner.style.display = 'inline-block';
+            if (textSpan) textSpan.textContent = 'Fetching...';
+
+            try {
+                const response = await fetch(`/api/jobs/${jobId}/fetch-description`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (response.ok && data.status === 'success') {
+                    if (descCell) {
+                        descCell.innerHTML = '<span style="color: #2e7d32; font-size: 12px; font-weight: 600;">✓ Saved</span>';
+                    }
+                    if (textSpan) textSpan.textContent = 'Re-fetch';
+                    btn.style.background = '#e6f4ea';
+                    btn.style.borderColor = '#ceead6';
+                    btn.style.color = '#137333';
+                } else {
+                    alert(data.detail || data.message || 'Failed to fetch description');
+                    if (textSpan) textSpan.textContent = 'Retry';
+                }
+            } catch (e) {
+                alert('Network error: ' + e.message);
+                if (textSpan) textSpan.textContent = 'Retry';
+            } finally {
+                btn.disabled = false;
+                if (spinner) spinner.style.display = 'none';
+            }
+        }
+
+        const activeResumePollers = {};
+
+        async function generateResume(jobId, btn) {
+            const spinner = btn.querySelector('.row-spinner');
+            const textSpan = btn.querySelector('.row-resume-text');
+            btn.disabled = true;
+            if (spinner) spinner.style.display = 'inline-block';
+            if (textSpan) textSpan.textContent = 'Submitting...';
+
+            try {
+                const response = await fetch(`/api/jobs/${jobId}/resume/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ template: 'modern' })
+                });
+                const data = await response.json();
+                if (response.ok && data.status === 'success') {
+                    if (textSpan) textSpan.textContent = 'Tailoring...';
+                    startRowResumePolling(jobId);
+                } else {
+                    alert(data.detail || data.message || 'Failed to trigger resume generation');
+                    btn.disabled = false;
+                    if (spinner) spinner.style.display = 'none';
+                    if (textSpan) textSpan.textContent = '✨ Tailor';
+                }
+            } catch (e) {
+                alert('Network error: ' + e.message);
+                btn.disabled = false;
+                if (spinner) spinner.style.display = 'none';
+                if (textSpan) textSpan.textContent = '✨ Tailor';
+            }
+        }
+
+        function startRowResumePolling(jobId) {
+            if (activeResumePollers[jobId]) clearInterval(activeResumePollers[jobId]);
+            activeResumePollers[jobId] = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/jobs/${jobId}/resume/status`);
+                    const data = await res.json();
+                    if (data.has_resume || data.resume_status === 'succeeded') {
+                        clearInterval(activeResumePollers[jobId]);
+                        delete activeResumePollers[jobId];
+                        const cell = document.getElementById(`resume-cell-${jobId}`);
+                        if (cell) {
+                            cell.innerHTML = `<a href="${data.download_url || `/job/${jobId}/resume`}" class="btn-sm-download" title="Download Tailored Resume PDF">📥 Download</a>`;
+                        }
+                    } else if (data.resume_status === 'failed') {
+                        clearInterval(activeResumePollers[jobId]);
+                        delete activeResumePollers[jobId];
+                        const cell = document.getElementById(`resume-cell-${jobId}`);
+                        if (cell) {
+                            cell.innerHTML = `<button class="btn-sm-resume" id="resume-btn-${jobId}" onclick="generateResume(${jobId}, this)" title="Retry Tailor Resume"><span class="row-spinner" style="display: none;"></span><span class="row-resume-text" style="color:#c62828;">✕ Retry</span></button>`;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Resume poll error for job", jobId, e);
+                }
+            }, 2500);
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            rawLastUpdated = document.body.dataset.lastUpdated || "";
+            isCurrentlyScraping = document.body.dataset.isScraping === "true";
+            updateLastUpdatedDisplay();
+            setInterval(updateLastUpdatedDisplay, 30000);
+            if (isCurrentlyScraping) {
+                setScrapingState(true, "Scraping in progress...");
+                startPolling();
+            }
+
+            // Auto-poll any jobs that are currently queued
+            document.querySelectorAll('[data-row-resume-status="queued"], [data-row-resume-status="processing"]').forEach(el => {
+                const jobId = el.dataset.jobId;
+                if (jobId) startRowResumePolling(jobId);
+            });
+        });
     </script>
 </head>
-<body>
-    <h1>Job Tracker</h1>
+<body data-last-updated="{{ (last_scrape.finished_at or last_scrape.started_at) if last_scrape else '' }}" data-is-scraping="{{ 'true' if is_scraping else 'false' }}">
+    <div class="header-container">
+        <h1>Job Tracker</h1>
+        <div class="header-actions">
+            <div class="last-updated-badge" id="last-updated-container" title="{{ (last_scrape.finished_at or last_scrape.started_at) if last_scrape else '' }}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span>Last updated: <strong id="last-updated-text">Calculating...</strong></span>
+            </div>
+            <button id="scrape-btn" class="btn-scrape" onclick="triggerScrape()">
+                <svg id="scrape-icon-bolt" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+                <span id="scrape-spinner" class="spinner" style="display: none;"></span>
+                <span id="scrape-btn-text">Scrape Jobs</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="scrape-banner" class="scrape-banner" style="display: none;">
+        <div class="banner-content">
+            <span id="scrape-banner-spinner" class="banner-spinner"></span>
+            <span id="scrape-banner-message">Scraping jobs across configured sources... This typically takes 1-2 minutes.</span>
+        </div>
+    </div>
 
     <div class="stats">
         <div class="stat-card">
@@ -95,25 +532,60 @@
                 <th>Location</th>
                 <th>Source</th>
                 <th>Status</th>
+                <th>Description</th>
+                <th>Resume</th>
                 <th>Relevance</th>
                 <th>Posted</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for job in jobs %}
-            <tr>
+            <tr data-job-id="{{ job.id }}" data-row-resume-status="{{ job.resume_status or 'none' }}">
                 <td><a href="/job/{{ job.id }}?source={{ current_source }}&status={{ current_status }}&relevant={{ current_relevant }}">{{ job.title }}</a></td>
                 <td class="company">{{ job.company }}</td>
                 <td>{{ job.location }}</td>
                 <td><span class="source-tag">{{ job.source }}</span></td>
                 <td><span class="badge badge-{{ job.status.value }}">{{ job.status.value }}</span></td>
+                <td id="desc-cell-{{ job.id }}">
+                    {% if job.description %}
+                    <span style="color: #2e7d32; font-size: 12px; font-weight: 600;">✓ Saved</span>
+                    {% else %}
+                    <span style="color: #999; font-size: 12px;">None</span>
+                    {% endif %}
+                </td>
+                <td id="resume-cell-{{ job.id }}">
+                    {% if job.resume_status == 'succeeded' and job.resume_path %}
+                    <a href="/job/{{ job.id }}/resume" class="btn-sm-download" title="Download Tailored Resume PDF">📥 Download</a>
+                    {% elif job.resume_status in ['queued', 'processing'] %}
+                    <button class="btn-sm-resume" id="resume-btn-{{ job.id }}" disabled>
+                        <span class="row-spinner"></span>
+                        <span class="row-resume-text">Tailoring...</span>
+                    </button>
+                    {% else %}
+                    <button class="btn-sm-resume" id="resume-btn-{{ job.id }}" onclick="generateResume({{ job.id }}, this)" title="Tailor customized resume with Shapeshifter">
+                        <span class="row-spinner" style="display: none;"></span>
+                        <span class="row-resume-text">✨ Tailor</span>
+                    </button>
+                    {% endif %}
+                </td>
                 <td>{% if job.title|relevant %}<span class="badge badge-new">Yes</span>{% else %}<span class="badge badge-irrelevant">No</span>{% endif %}</td>
                 <td>{{ job.posted_date or '-' }}</td>
+                <td>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <a href="/job/{{ job.id }}?source={{ current_source }}&status={{ current_status }}&relevant={{ current_relevant }}" style="font-size: 13px;">View</a>
+                        <button class="btn-sm-fetch" id="fetch-btn-{{ job.id }}" onclick="fetchJobDesc({{ job.id }}, this)" title="Fetch and save full job description">
+                            <span class="row-spinner" style="display: none;"></span>
+                            <span class="row-btn-text">{% if job.description %}Re-fetch{% else %}Fetch{% endif %}</span>
+                        </button>
+                    </div>
+                </td>
             </tr>
             {% else %}
-            <tr><td colspan="7" style="text-align:center;padding:40px;color:#999;">No jobs found</td></tr>
+            <tr><td colspan="10" style="text-align:center;padding:40px;color:#999;">No jobs found</td></tr>
             {% endfor %}
         </tbody>
     </table>
 </body>
 </html>
+
