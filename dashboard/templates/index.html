@@ -147,7 +147,57 @@
         .badge-dismissed { background: #f5f5f5; color: #999; }
         .badge-irrelevant { background: #fce4ec; color: #c62828; }
         .source-tag { font-size: 11px; color: #888; }
-        .company { font-weight: 600; }
+        .btn-sm-download {
+            padding: 4px 8px;
+            font-size: 12px;
+            background: #0f9d58;
+            color: #fff !important;
+            border: 1px solid #0b8043;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            text-decoration: none !important;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .btn-sm-download:hover {
+            background: #0b8043;
+            opacity: 0.95;
+        }
+        .btn-sm-resume {
+            padding: 4px 8px;
+            font-size: 12px;
+            background: #f3e8fd;
+            color: #6a1b9a;
+            border: 1px solid #e1bee7;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .btn-sm-resume:hover:not(:disabled) {
+            background: #e8d0fb;
+        }
+        .btn-sm-resume:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .row-spinner {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border: 1.5px solid rgba(23, 78, 166, 0.25);
+            border-radius: 50%;
+            border-top-color: #174ea6;
+            animation: spin 0.8s linear infinite;
+        }
     </style>
     <script>
         function applyFilter() {
@@ -289,6 +339,102 @@
             bannerMsg.textContent = msg;
         }
 
+        async function fetchJobDesc(jobId, btn) {
+            const textSpan = btn.querySelector('.row-btn-text');
+            const spinner = btn.querySelector('.row-spinner');
+            const descCell = document.getElementById(`desc-cell-${jobId}`);
+
+            btn.disabled = true;
+            if (spinner) spinner.style.display = 'inline-block';
+            if (textSpan) textSpan.textContent = 'Fetching...';
+
+            try {
+                const response = await fetch(`/api/jobs/${jobId}/fetch-description`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (response.ok && data.status === 'success') {
+                    if (descCell) {
+                        descCell.innerHTML = '<span style="color: #2e7d32; font-size: 12px; font-weight: 600;">✓ Saved</span>';
+                    }
+                    if (textSpan) textSpan.textContent = 'Re-fetch';
+                    btn.style.background = '#e6f4ea';
+                    btn.style.borderColor = '#ceead6';
+                    btn.style.color = '#137333';
+                } else {
+                    alert(data.detail || data.message || 'Failed to fetch description');
+                    if (textSpan) textSpan.textContent = 'Retry';
+                }
+            } catch (e) {
+                alert('Network error: ' + e.message);
+                if (textSpan) textSpan.textContent = 'Retry';
+            } finally {
+                btn.disabled = false;
+                if (spinner) spinner.style.display = 'none';
+            }
+        }
+
+        const activeResumePollers = {};
+
+        async function generateResume(jobId, btn) {
+            const spinner = btn.querySelector('.row-spinner');
+            const textSpan = btn.querySelector('.row-resume-text');
+            btn.disabled = true;
+            if (spinner) spinner.style.display = 'inline-block';
+            if (textSpan) textSpan.textContent = 'Submitting...';
+
+            try {
+                const response = await fetch(`/api/jobs/${jobId}/resume/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ template: 'modern' })
+                });
+                const data = await response.json();
+                if (response.ok && data.status === 'success') {
+                    if (textSpan) textSpan.textContent = 'Tailoring...';
+                    startRowResumePolling(jobId);
+                } else {
+                    alert(data.detail || data.message || 'Failed to trigger resume generation');
+                    btn.disabled = false;
+                    if (spinner) spinner.style.display = 'none';
+                    if (textSpan) textSpan.textContent = '✨ Tailor';
+                }
+            } catch (e) {
+                alert('Network error: ' + e.message);
+                btn.disabled = false;
+                if (spinner) spinner.style.display = 'none';
+                if (textSpan) textSpan.textContent = '✨ Tailor';
+            }
+        }
+
+        function startRowResumePolling(jobId) {
+            if (activeResumePollers[jobId]) clearInterval(activeResumePollers[jobId]);
+            activeResumePollers[jobId] = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/jobs/${jobId}/resume/status`);
+                    const data = await res.json();
+                    if (data.has_resume || data.resume_status === 'succeeded') {
+                        clearInterval(activeResumePollers[jobId]);
+                        delete activeResumePollers[jobId];
+                        const cell = document.getElementById(`resume-cell-${jobId}`);
+                        if (cell) {
+                            cell.innerHTML = `<a href="${data.download_url || `/job/${jobId}/resume`}" class="btn-sm-download" title="Download Tailored Resume PDF">📥 Download</a>`;
+                        }
+                    } else if (data.resume_status === 'failed') {
+                        clearInterval(activeResumePollers[jobId]);
+                        delete activeResumePollers[jobId];
+                        const cell = document.getElementById(`resume-cell-${jobId}`);
+                        if (cell) {
+                            cell.innerHTML = `<button class="btn-sm-resume" id="resume-btn-${jobId}" onclick="generateResume(${jobId}, this)" title="Retry Tailor Resume"><span class="row-spinner" style="display: none;"></span><span class="row-resume-text" style="color:#c62828;">✕ Retry</span></button>`;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Resume poll error for job", jobId, e);
+                }
+            }, 2500);
+        }
+
         document.addEventListener("DOMContentLoaded", function() {
             rawLastUpdated = document.body.dataset.lastUpdated || "";
             isCurrentlyScraping = document.body.dataset.isScraping === "true";
@@ -298,6 +444,12 @@
                 setScrapingState(true, "Scraping in progress...");
                 startPolling();
             }
+
+            // Auto-poll any jobs that are currently queued
+            document.querySelectorAll('[data-row-resume-status="queued"], [data-row-resume-status="processing"]').forEach(el => {
+                const jobId = el.dataset.jobId;
+                if (jobId) startRowResumePolling(jobId);
+            });
         });
     </script>
 </head>
@@ -380,25 +532,60 @@
                 <th>Location</th>
                 <th>Source</th>
                 <th>Status</th>
+                <th>Description</th>
+                <th>Resume</th>
                 <th>Relevance</th>
                 <th>Posted</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for job in jobs %}
-            <tr>
+            <tr data-job-id="{{ job.id }}" data-row-resume-status="{{ job.resume_status or 'none' }}">
                 <td><a href="/job/{{ job.id }}?source={{ current_source }}&status={{ current_status }}&relevant={{ current_relevant }}">{{ job.title }}</a></td>
                 <td class="company">{{ job.company }}</td>
                 <td>{{ job.location }}</td>
                 <td><span class="source-tag">{{ job.source }}</span></td>
                 <td><span class="badge badge-{{ job.status.value }}">{{ job.status.value }}</span></td>
+                <td id="desc-cell-{{ job.id }}">
+                    {% if job.description %}
+                    <span style="color: #2e7d32; font-size: 12px; font-weight: 600;">✓ Saved</span>
+                    {% else %}
+                    <span style="color: #999; font-size: 12px;">None</span>
+                    {% endif %}
+                </td>
+                <td id="resume-cell-{{ job.id }}">
+                    {% if job.resume_status == 'succeeded' and job.resume_path %}
+                    <a href="/job/{{ job.id }}/resume" class="btn-sm-download" title="Download Tailored Resume PDF">📥 Download</a>
+                    {% elif job.resume_status in ['queued', 'processing'] %}
+                    <button class="btn-sm-resume" id="resume-btn-{{ job.id }}" disabled>
+                        <span class="row-spinner"></span>
+                        <span class="row-resume-text">Tailoring...</span>
+                    </button>
+                    {% else %}
+                    <button class="btn-sm-resume" id="resume-btn-{{ job.id }}" onclick="generateResume({{ job.id }}, this)" title="Tailor customized resume with Shapeshifter">
+                        <span class="row-spinner" style="display: none;"></span>
+                        <span class="row-resume-text">✨ Tailor</span>
+                    </button>
+                    {% endif %}
+                </td>
                 <td>{% if job.title|relevant %}<span class="badge badge-new">Yes</span>{% else %}<span class="badge badge-irrelevant">No</span>{% endif %}</td>
                 <td>{{ job.posted_date or '-' }}</td>
+                <td>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <a href="/job/{{ job.id }}?source={{ current_source }}&status={{ current_status }}&relevant={{ current_relevant }}" style="font-size: 13px;">View</a>
+                        <button class="btn-sm-fetch" id="fetch-btn-{{ job.id }}" onclick="fetchJobDesc({{ job.id }}, this)" title="Fetch and save full job description">
+                            <span class="row-spinner" style="display: none;"></span>
+                            <span class="row-btn-text">{% if job.description %}Re-fetch{% else %}Fetch{% endif %}</span>
+                        </button>
+                    </div>
+                </td>
             </tr>
             {% else %}
-            <tr><td colspan="7" style="text-align:center;padding:40px;color:#999;">No jobs found</td></tr>
+            <tr><td colspan="10" style="text-align:center;padding:40px;color:#999;">No jobs found</td></tr>
             {% endfor %}
         </tbody>
     </table>
 </body>
 </html>
+
