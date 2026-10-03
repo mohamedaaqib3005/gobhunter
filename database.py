@@ -34,6 +34,11 @@ def init_db() -> None:
             status TEXT NOT NULL DEFAULT 'new',
             applied_date TEXT,
             notes TEXT,
+            resume_path TEXT,
+            resume_job_id TEXT,
+            resume_status TEXT DEFAULT 'none',
+            resume_meta TEXT,
+            resume_updated_at TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
@@ -44,6 +49,26 @@ def init_db() -> None:
     conn.execute("""
         CREATE INDEX IF NOT EXISTS idx_jobs_source ON jobs(source)
     """)
+
+    # Safe column migration for existing databases
+    existing_columns = {
+        row["name"] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()
+    }
+    new_columns = {
+        "resume_path": "TEXT",
+        "resume_job_id": "TEXT",
+        "resume_status": "TEXT DEFAULT 'none'",
+        "resume_meta": "TEXT",
+        "resume_updated_at": "TEXT",
+    }
+    for col_name, col_type in new_columns.items():
+        if col_name not in existing_columns:
+            conn.execute(f"ALTER TABLE jobs ADD COLUMN {col_name} {col_type}")
+
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_jobs_resume_job_id ON jobs(resume_job_id)
+    """)
+
     conn.execute("""
         CREATE TABLE IF NOT EXISTS scrape_runs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -338,6 +363,32 @@ def update_job_description(job_id: int, description: str) -> None:
     conn.close()
 
 
+def update_job_scraped_details(
+    job_id: int,
+    description: str | None = None,
+    salary_range: str | None = None,
+    location: str | None = None,
+) -> None:
+    conn = get_conn()
+    now = datetime.now(timezone.utc).isoformat()
+    fields = ["updated_at = ?"]
+    params = [now]
+    if description is not None:
+        fields.append("description = ?")
+        params.append(description)
+    if salary_range is not None:
+        fields.append("salary_range = ?")
+        params.append(salary_range)
+    if location is not None:
+        fields.append("location = ?")
+        params.append(location)
+    params.append(job_id)
+    conn.execute(f"UPDATE jobs SET {', '.join(fields)} WHERE id = ?", params)
+    conn.commit()
+    conn.close()
+
+
+
 
 def get_stats() -> dict:
     conn = get_conn()
@@ -370,7 +421,83 @@ def delete_irrelevant_jobs() -> int:
     return len(to_delete)
 
 
+RESUMES_DIR = Path(__file__).parent / "resumes"
+
+
+def get_job_by_resume_job_id(resume_job_id: str) -> Job | None:
+    init_db()
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT * FROM jobs WHERE resume_job_id = ? ORDER BY id DESC LIMIT 1",
+        (resume_job_id,),
+    ).fetchone()
+    conn.close()
+    return _row_to_job(row) if row else None
+
+
+def update_job_resume_status(
+    job_id: int,
+    resume_status: str,
+    resume_job_id: str | None = None,
+    resume_path: str | None = None,
+    resume_meta: str | None = None,
+) -> None:
+    init_db()
+    conn = get_conn()
+    now = datetime.now(timezone.utc).isoformat()
+    fields = ["resume_status = ?", "resume_updated_at = ?"]
+    params = [resume_status, now]
+
+    if resume_job_id is not None:
+        fields.append("resume_job_id = ?")
+        params.append(resume_job_id)
+    if resume_path is not None:
+        fields.append("resume_path = ?")
+        params.append(resume_path)
+    if resume_meta is not None:
+        fields.append("resume_meta = ?")
+        params.append(resume_meta)
+
+    params.append(job_id)
+    conn.execute(f"UPDATE jobs SET {', '.join(fields)} WHERE id = ?", params)
+    conn.commit()
+    conn.close()
+
+
+def save_job_resume_pdf(
+    job_id: int,
+    pdf_bytes: bytes,
+    filename: str | None = None,
+    resume_job_id: str | None = None,
+    meta: str | None = None,
+) -> str:
+    RESUMES_DIR.mkdir(parents=True, exist_ok=True)
+    
+    # Clean filename
+    job = get_job(job_id)
+    safe_company = "".join(c for c in (job.company if job else "company") if c.isalnum() or c in (" ", "_", "-")).strip()
+    safe_title = "".join(c for c in (job.title if job else "resume") if c.isalnum() or c in (" ", "_", "-")).strip()
+    
+    if filename:
+        save_name = f"{job_id}_{filename}"
+    else:
+        save_name = f"resume_{job_id}_{safe_company}_{safe_title}.pdf".replace(" ", "_")
+
+    file_path = RESUMES_DIR / save_name
+    file_path.write_bytes(pdf_bytes)
+
+    update_job_resume_status(
+        job_id=job_id,
+        resume_status="succeeded",
+        resume_job_id=resume_job_id,
+        resume_path=str(file_path.resolve()),
+        resume_meta=meta,
+    )
+    return str(file_path.resolve())
+
+
 def _row_to_job(row: sqlite3.Row) -> Job:
+    keys = row.keys() if hasattr(row, "keys") else []
     return Job(
         id=row["id"],
         title=row["title"],
@@ -383,4 +510,9 @@ def _row_to_job(row: sqlite3.Row) -> Job:
         posted_date=row["posted_date"],
         status=JobStatus(row["status"]),
         notes=row["notes"],
+        resume_path=row["resume_path"] if "resume_path" in keys else None,
+        resume_job_id=row["resume_job_id"] if "resume_job_id" in keys else None,
+        resume_status=row["resume_status"] if "resume_status" in keys else "none",
+        resume_meta=row["resume_meta"] if "resume_meta" in keys else None,
+        resume_updated_at=row["resume_updated_at"] if "resume_updated_at" in keys else None,
     )
