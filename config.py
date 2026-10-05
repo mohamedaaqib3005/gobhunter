@@ -15,9 +15,15 @@ def _build_title_patterns(settings: "Settings") -> list[re.Pattern]:
     include_keywords = [kw.strip() for kw in settings.include_keywords.split(",") if kw.strip()]
     exclude_keywords = [kw.strip() for kw in settings.exclude_keywords.split(",") if kw.strip()]
 
+    # If include_keywords is empty, fall back to terms in search_query
+    if not include_keywords and settings.search_query:
+        include_keywords = [kw.strip() for kw in settings.search_query.split(",") if kw.strip()]
+        if not include_keywords:
+            include_keywords = [settings.search_query.strip()]
+
     exclude_parts = [re.escape(kw) for kw in exclude_keywords]
     exclude_parts.extend([_SENIORITY, _LEVEL_2UP])
-    exclude_pattern = "|".join(exclude_parts)
+    exclude_pattern = "|".join(p for p in exclude_parts if p)
 
     patterns = []
     for inc in include_keywords:
@@ -26,19 +32,12 @@ def _build_title_patterns(settings: "Settings") -> list[re.Pattern]:
             re.IGNORECASE,
         ))
 
-    # SDE 1 / SDE I (any level-1 variant)
-    patterns.append(re.compile(r"^.*\bSDE\s*[-–—]?\s*(?:1|I)\b.*$", re.IGNORECASE | re.DOTALL))
-    # Software Development Engineer 1 / I
-    patterns.append(re.compile(
-        r"^.*\bSoftware\s+Development\s+Engineer\s+(?:1|I)\b.*$",
-        re.IGNORECASE | re.DOTALL,
-    ))
-
     return patterns
 
 
 def is_relevant_title(title: str) -> bool:
-    return any(p.search(title) for p in INCLUDE_TITLE_PATTERNS)
+    patterns = _build_title_patterns(settings)
+    return any(p.search(title) for p in patterns)
 
 
 class Settings(BaseSettings):
@@ -76,9 +75,8 @@ class Settings(BaseSettings):
     applicant_linkedin: str = ""
     applicant_portfolio: str = ""
     applicant_cover_letter: str = (
-        "Hi, I'm a passionate Python backend developer "
-        "looking for opportunities to build scalable systems. "
-        "I have experience with Python, FastAPI, Django, and databases."
+        "Hi, I'm a passionate software developer "
+        "looking for opportunities to build scalable systems."
     )
 
     shapeshifter_url: str = "http://localhost:3001"

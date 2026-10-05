@@ -51,7 +51,7 @@ def _extract_job_id(url: str) -> str | None:
 
 class LinkedInScraper(BaseScraper):
     name = "linkedin"
-    login_url = "https://www.linkedin.com/jobs/search/?keywords=python+backend&location=Bangalore"
+    login_url = "https://www.linkedin.com/jobs"
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",

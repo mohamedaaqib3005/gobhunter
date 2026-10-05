@@ -52,23 +52,54 @@ class CutshortScraper(BaseScraper):
 
     def _get_search_slugs(self, query: str, locations: list[str]) -> list[str]:
         """Generate Cutshort webpage job collection slugs based on query and locations."""
+        from config import settings
+
         q = query.lower()
+        include_kws = [kw.strip().lower() for kw in settings.include_keywords.split(",") if kw.strip()]
+        search_terms = f"{q} {' '.join(include_kws)}"
         slugs = []
 
         # Role-based collection slugs
-        if "backend" in q or "python" in q or "django" in q or "node" in q or "java" in q or "golang" in q:
+        backend_keywords = [
+            "backend", "python", "django", "flask", "fastapi", "node", "nodejs",
+            "java", "golang", "go", "ruby", "rails", "php", "c++", "c#", ".net",
+            "rust", "software engineer", "software development", "sde"
+        ]
+        if any(k in search_terms for k in backend_keywords):
             slugs.append("backend-developer-jobs")
-        if "frontend" in q or "react" in q or "vue" in q or "angular" in q or "ui" in q:
+
+        frontend_keywords = [
+            "frontend", "front-end", "react", "vue", "angular", "ui", "ux",
+            "web developer", "javascript", "typescript", "nextjs", "css", "html"
+        ]
+        if any(k in search_terms for k in frontend_keywords):
             slugs.append("frontend-developer-jobs")
-        if "devops" in q or "cloud" in q or "infra" in q or "sre" in q:
+
+        fullstack_keywords = ["fullstack", "full-stack", "full stack"]
+        if any(k in search_terms for k in fullstack_keywords):
+            slugs.append("full-stack-developer-jobs")
+
+        devops_keywords = [
+            "devops", "cloud", "infra", "sre", "kubernetes", "docker", "aws",
+            "gcp", "azure", "ci/cd", "terraform"
+        ]
+        if any(k in search_terms for k in devops_keywords):
             slugs.append("devops-jobs")
-        if "android" in q:
+
+        if any(k in search_terms for k in ["android", "kotlin"]):
             slugs.append("android-developer-jobs")
-        if "ios" in q:
+        if any(k in search_terms for k in ["ios", "swift"]):
             slugs.append("ios-developer-jobs")
 
+        data_keywords = [
+            "data", "ml", "ai", "machine learning", "deep learning", "nlp",
+            "llm", "data scientist", "data engineer"
+        ]
+        if any(k in search_terms for k in data_keywords):
+            slugs.append("data-scientist-jobs")
+
         if not slugs:
-            slugs.append("backend-developer-jobs")
+            slugs.append("startup-jobs")
 
         # Location-based collection slugs
         for loc in locations:

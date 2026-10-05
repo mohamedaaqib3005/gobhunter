@@ -46,7 +46,7 @@ def _extract_job_key(url: str) -> str | None:
 
 class IndeedScraper(BaseScraper):
     name = "indeed"
-    login_url = "https://in.indeed.com/jobs?q=python&l=Bangalore"
+    login_url = "https://in.indeed.com"
 
     async def search(self, page: Page, query: str, locations: list[str]) -> list[dict]:
         """Search jobs on Indeed by extracting Mosaic JSON and DOM fallback."""

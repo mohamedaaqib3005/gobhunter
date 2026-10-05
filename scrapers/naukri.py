@@ -6,7 +6,7 @@ from utils.browser import human_like_scroll, random_delay
 
 class NaukriScraper(BaseScraper):
     name = "naukri"
-    login_url = "https://www.naukri.com/python-backend-developer-jobs-in-bangalore"
+    login_url = "https://www.naukri.com"
 
     async def search(self, page: Page, query: str, locations: list[str]) -> list[dict]:
         page.set_default_timeout(20000)
