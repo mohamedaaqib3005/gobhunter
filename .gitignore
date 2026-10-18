@@ -8,3 +8,9 @@ jobs.db
 logs/
 *.log
 .venv/
+
+# Personal data, never commit
+profile.md
+resumes/
+*.pdf
+scrape.log
