@@ -1,6 +1,6 @@
 import re
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -8,6 +8,86 @@ from config import is_relevant_title
 from models import Job, JobStatus
 
 DB_PATH = Path(__file__).parent / "jobs.db"
+
+
+# ---------------------------------------------------------------------------
+# Location and work-mode classification
+#
+# Locations arrive as free text and differ per site: "Bengaluru, Karnataka",
+# "Bangalore/Remote", "Hybrid - Pune". Rather than offer a dropdown of every
+# distinct string (there are hundreds), each job is matched against a small
+# set of canonical cities by substring.
+# ---------------------------------------------------------------------------
+
+# The literal string every scraper writes when it cannot find a location at
+# all. It contains the word "Remote" but means "unknown", so it must never be
+# classified as a remote job.
+FALLBACK_LOCATION = "bangalore/remote"
+
+CITY_ALIASES: dict[str, tuple[str, ...]] = {
+    "bangalore": ("bangalore", "bengaluru"),
+    "hyderabad": ("hyderabad", "secunderabad"),
+    "chennai": ("chennai", "madras"),
+    "mumbai": ("mumbai", "navi mumbai", "thane"),
+    "delhi": ("delhi", "noida", "gurgaon", "gurugram", "faridabad", "ncr"),
+    "pune": ("pune",),
+    "kochi": ("kochi", "cochin", "ernakulam"),
+    "remote": ("remote", "work from home", "wfh", "anywhere"),
+}
+
+REMOTE_WORDS = ("remote", "work from home", "wfh", "anywhere")
+
+# Cities only, used to decide whether a "remote" posting also names an office.
+_PHYSICAL_ALIASES = tuple(
+    alias
+    for city, aliases in CITY_ALIASES.items()
+    if city != "remote"
+    for alias in aliases
+)
+
+
+def classify_work_mode(location: str | None) -> str:
+    """Returns 'remote', 'hybrid', 'onsite' or 'unknown'.
+
+    The fallback string is treated as unknown rather than remote. Without that
+    check every job whose location failed to scrape would look like a remote
+    role, which is the opposite of useful.
+    """
+    if not location:
+        return "unknown"
+    low = location.strip().lower()
+    if low == FALLBACK_LOCATION:
+        return "unknown"
+    if "hybrid" in low:
+        return "hybrid"
+    if any(word in low for word in REMOTE_WORDS):
+        # "Remote" alongside a named city is in practice a hybrid listing.
+        if any(alias in low for alias in _PHYSICAL_ALIASES):
+            return "hybrid"
+        return "remote"
+    return "onsite"
+
+
+def matches_city(location: str | None, city_key: str) -> bool:
+    if not location:
+        return False
+    low = location.strip().lower()
+    # The fallback means "the scraper found no location", so it must not match
+    # any city. It literally reads "Bangalore/Remote", which would otherwise
+    # count it as both a Bangalore job and a remote one.
+    if low == FALLBACK_LOCATION:
+        return False
+    return any(alias in low for alias in CITY_ALIASES.get(city_key, ()))
+
+
+# Time windows offered by the dashboard, in minutes.
+POSTED_WITHIN_MINUTES: dict[str, int] = {
+    "30m": 30,
+    "1h": 60,
+    "24h": 60 * 24,
+    "3d": 60 * 24 * 3,
+    "7d": 60 * 24 * 7,
+}
 
 
 def get_conn() -> sqlite3.Connection:
@@ -300,12 +380,26 @@ def get_jobs(
     status: str | None = None,
     relevant: bool = True,
     exclude_dismissed: bool = True,
-    limit: int = 100,
+    city: str | None = None,
+    work_mode: str | None = None,
+    posted_within: str | None = None,
+    search: str | None = None,
+    limit: int = 500,
     offset: int = 0,
 ) -> list[Job]:
+    """Jobs matching every supplied filter, newest first.
+
+    `city`, `work_mode` and `posted_within` are the dashboard's new filters.
+
+    IMPORTANT: `posted_within` filters on `created_at`, which is when this tool
+    first SAW the job, not when the employer posted it. No scraper populates
+    `posted_date`, so a real posting time is not available. Jobs arrive in
+    batches, so a 30-minute window shows the most recent scrape rather than
+    genuinely fresh postings.
+    """
     conn = get_conn()
     query = "SELECT * FROM jobs WHERE 1=1"
-    params = []
+    params: list = []
     if source:
         query += " AND source = ?"
         params.append(source)
@@ -314,13 +408,37 @@ def get_jobs(
         params.append(status)
     elif exclude_dismissed:
         query += " AND status != 'dismissed'"
+    if search:
+        query += " AND (LOWER(title) LIKE ? OR LOWER(company) LIKE ?)"
+        needle = f"%{search.strip().lower()}%"
+        params.extend([needle, needle])
+    if posted_within in POSTED_WITHIN_MINUTES:
+        cutoff = datetime.now(timezone.utc) - timedelta(
+            minutes=POSTED_WITHIN_MINUTES[posted_within]
+        )
+        # created_at is stored as an ISO-8601 UTC string, which sorts and
+        # compares correctly as text.
+        query += " AND created_at >= ?"
+        params.append(cutoff.isoformat())
     query += " ORDER BY created_at DESC"
     rows = conn.execute(query, params).fetchall()
     conn.close()
+
     jobs = [_row_to_job(r) for r in rows]
     if relevant:
         jobs = [j for j in jobs if is_relevant_title(j.title)]
+    if city and city != "all":
+        jobs = [j for j in jobs if matches_city(j.location, city)]
+    if work_mode and work_mode != "all":
+        jobs = [j for j in jobs if classify_work_mode(j.location) == work_mode]
     return jobs[offset:offset + limit]
+
+
+def count_jobs(**kwargs) -> int:
+    """Total matching rows, ignoring limit/offset. Used for the result count."""
+    kwargs.pop("limit", None)
+    kwargs.pop("offset", None)
+    return len(get_jobs(limit=10**9, offset=0, **kwargs))
 
 
 def get_job(job_id: int) -> Job | None:
@@ -515,4 +633,10 @@ def _row_to_job(row: sqlite3.Row) -> Job:
         resume_status=row["resume_status"] if "resume_status" in keys else "none",
         resume_meta=row["resume_meta"] if "resume_meta" in keys else None,
         resume_updated_at=row["resume_updated_at"] if "resume_updated_at" in keys else None,
+        # These two were missing. The columns are NOT NULL in the table and are
+        # written on every insert, but they were never read back, so every Job
+        # object reached the template with created_at = None. The "Found" column
+        # and the time filters both depend on this.
+        created_at=row["created_at"] if "created_at" in keys else None,
+        updated_at=row["updated_at"] if "updated_at" in keys else None,
     )

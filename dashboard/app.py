@@ -11,6 +11,8 @@ from fastapi.templating import Jinja2Templates
 
 from config import is_relevant_title
 from database import (
+    CITY_ALIASES,
+    classify_work_mode,
     get_job,
     get_job_by_resume_job_id,
     get_jobs,
@@ -78,6 +80,7 @@ app = FastAPI(
 templates_dir = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(templates_dir))
 templates.env.filters["relevant"] = is_relevant_title
+templates.env.filters["work_mode"] = classify_work_mode
 
 
 # ==========================================
@@ -96,11 +99,28 @@ async def index(
     source: str | None = Query(None, description="Filter by job source platform"),
     status: str | None = Query(None, description="Filter by job status"),
     relevant: str | None = Query(None, description="Filter by title relevance ('all' or 'true')"),
+    city: str | None = Query(None, description="Filter by city, e.g. 'bangalore' or 'remote'"),
+    work_mode: str | None = Query(None, description="'remote', 'hybrid', 'onsite' or 'unknown'"),
+    posted_within: str | None = Query(None, description="Time window: 30m, 1h, 24h, 3d, 7d"),
+    q: str | None = Query(None, description="Search job title or company"),
 ):
     filter_source = source if source and source != "all" else None
     filter_status = status if status and status != "all" else None
     filter_relevant = relevant != "all"
-    jobs = get_jobs(source=filter_source, status=filter_status, relevant=filter_relevant)
+    filter_city = city if city and city != "all" else None
+    filter_mode = work_mode if work_mode and work_mode != "all" else None
+    filter_within = posted_within if posted_within and posted_within != "all" else None
+    search = q.strip() if q and q.strip() else None
+
+    jobs = get_jobs(
+        source=filter_source,
+        status=filter_status,
+        relevant=filter_relevant,
+        city=filter_city,
+        work_mode=filter_mode,
+        posted_within=filter_within,
+        search=search,
+    )
     stats = get_stats()
     last_scrape = get_last_scrape_run()
     is_scraping = is_scrape_running()
@@ -112,6 +132,11 @@ async def index(
         "current_source": source or "all",
         "current_status": status or "all",
         "current_relevant": relevant or "true",
+        "current_city": city or "all",
+        "current_work_mode": work_mode or "all",
+        "current_posted_within": posted_within or "all",
+        "current_q": search or "",
+        "cities": list(CITY_ALIASES.keys()),
         "sources": ["indeed", "naukri",  "instahyre", "cutshort", "linkedin", "wellfound"],
     })
 

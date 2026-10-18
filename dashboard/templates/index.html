@@ -131,6 +131,12 @@
         .stat-card .count { font-size: 28px; font-weight: 700; }
         .filters { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
         .filters select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+        .mode-tag { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: capitalize; }
+        .mode-remote  { background: #e6f4ea; color: #137333; }
+        .mode-hybrid  { background: #fef7e0; color: #b06000; }
+        .mode-onsite  { background: #e8f0fe; color: #174ea6; }
+        .mode-unknown { background: #f1f3f4; color: #80868b; }
+        .found-cell { font-size: 12px; color: #666; white-space: nowrap; }
         .job-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .job-table th { background: #fafafa; text-align: left; padding: 12px 16px; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #eee; }
         .job-table td { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
@@ -202,8 +208,12 @@
     <script>
         function applyFilter() {
             const params = new URLSearchParams();
-            document.querySelectorAll('.filters select').forEach(function(sel) {
-                params.set(sel.name, sel.value);
+            // Selects AND the search box, otherwise typing a query then
+            // changing a dropdown would silently discard the query.
+            document.querySelectorAll('.filters select, .filters input[name="q"]').forEach(function(el) {
+                if (el.value !== "" && el.value !== null) {
+                    params.set(el.name, el.value);
+                }
             });
             window.location.search = params.toString();
         }
@@ -435,10 +445,22 @@
             }, 2500);
         }
 
+        // Fills the "Found" column. The value is created_at, i.e. when this
+        // tool first saw the job, NOT when the employer posted it. No scraper
+        // populates posted_date, so a true posting time is not available.
+        function renderFoundTimes() {
+            document.querySelectorAll('.found-cell').forEach(function(cell) {
+                const raw = cell.dataset.created;
+                cell.textContent = raw ? formatTimeAgo(raw) : "-";
+            });
+        }
+
         document.addEventListener("DOMContentLoaded", function() {
             rawLastUpdated = document.body.dataset.lastUpdated || "";
             isCurrentlyScraping = document.body.dataset.isScraping === "true";
             updateLastUpdatedDisplay();
+            renderFoundTimes();
+            setInterval(renderFoundTimes, 60000);
             setInterval(updateLastUpdatedDisplay, 30000);
             if (isCurrentlyScraping) {
                 setScrapingState(true, "Scraping in progress...");
@@ -522,6 +544,31 @@
             <option value="true" {% if current_relevant == 'true' %}selected{% endif %}>Relevant only</option>
             <option value="all" {% if current_relevant == 'all' %}selected{% endif %}>All jobs</option>
         </select>
+        <select name="city" onchange="applyFilter()">
+            <option value="all" {% if current_city == 'all' %}selected{% endif %}>All Locations</option>
+            {% for c in cities %}
+            <option value="{{ c }}" {% if current_city == c %}selected{% endif %}>{{ c|capitalize }}</option>
+            {% endfor %}
+        </select>
+        <select name="work_mode" onchange="applyFilter()">
+            <option value="all" {% if current_work_mode == 'all' %}selected{% endif %}>Remote &amp; Office</option>
+            <option value="remote" {% if current_work_mode == 'remote' %}selected{% endif %}>Remote only</option>
+            <option value="hybrid" {% if current_work_mode == 'hybrid' %}selected{% endif %}>Hybrid</option>
+            <option value="onsite" {% if current_work_mode == 'onsite' %}selected{% endif %}>Office only</option>
+            <option value="unknown" {% if current_work_mode == 'unknown' %}selected{% endif %}>Unknown</option>
+        </select>
+        <select name="posted_within" onchange="applyFilter()" title="Filters on when gobhunter first saw the job, not when it was posted">
+            <option value="all" {% if current_posted_within == 'all' %}selected{% endif %}>Any time</option>
+            <option value="30m" {% if current_posted_within == '30m' %}selected{% endif %}>Found: last 30 min</option>
+            <option value="1h" {% if current_posted_within == '1h' %}selected{% endif %}>Found: last hour</option>
+            <option value="24h" {% if current_posted_within == '24h' %}selected{% endif %}>Found: last 24 hours</option>
+            <option value="3d" {% if current_posted_within == '3d' %}selected{% endif %}>Found: last 3 days</option>
+            <option value="7d" {% if current_posted_within == '7d' %}selected{% endif %}>Found: last 7 days</option>
+        </select>
+        <input type="search" name="q" value="{{ current_q }}" placeholder="Search title or company"
+               onkeydown="if(event.key==='Enter'){applyFilter();}"
+               style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; min-width: 200px;">
+        <span style="align-self: center; font-size: 13px; color: #666;">{{ jobs|length }} shown</span>
     </div>
 
     <table class="job-table">
@@ -530,6 +577,8 @@
                 <th>Title</th>
                 <th>Company</th>
                 <th>Location</th>
+                <th>Mode</th>
+                <th>Found</th>
                 <th>Source</th>
                 <th>Status</th>
                 <th>Description</th>
@@ -545,6 +594,8 @@
                 <td><a href="/job/{{ job.id }}?source={{ current_source }}&status={{ current_status }}&relevant={{ current_relevant }}">{{ job.title }}</a></td>
                 <td class="company">{{ job.company }}</td>
                 <td>{{ job.location }}</td>
+                <td><span class="mode-tag mode-{{ job.location|work_mode }}">{{ job.location|work_mode }}</span></td>
+                <td class="found-cell" data-created="{{ job.created_at or '' }}" title="{{ job.created_at or 'unknown' }}">-</td>
                 <td><span class="source-tag">{{ job.source }}</span></td>
                 <td><span class="badge badge-{{ job.status.value }}">{{ job.status.value }}</span></td>
                 <td id="desc-cell-{{ job.id }}">
