@@ -136,7 +136,13 @@
         .mode-hybrid  { background: #fef7e0; color: #b06000; }
         .mode-onsite  { background: #e8f0fe; color: #174ea6; }
         .mode-unknown { background: #f1f3f4; color: #80868b; }
-        .found-cell { font-size: 12px; color: #666; white-space: nowrap; }
+        .found-cell { font-size: 12px; color: #999; white-space: nowrap; }
+        .exp-cell { font-size: 12px; color: #555; white-space: nowrap; }
+        .posted-cell { font-size: 12px; white-space: nowrap; font-weight: 600; }
+        .posted-fresh   { color: #137333; }
+        .posted-ok      { color: #b06000; }
+        .posted-stale   { color: #c5221f; }
+        .posted-unknown { color: #bbb; font-weight: 400; }
         .job-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .job-table th { background: #fafafa; text-align: left; padding: 12px 16px; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #eee; }
         .job-table td { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
@@ -445,13 +451,25 @@
             }, 2500);
         }
 
-        // Fills the "Found" column. The value is created_at, i.e. when this
-        // tool first saw the job, NOT when the employer posted it. No scraper
-        // populates posted_date, so a true posting time is not available.
+        // Fills the "Found" column from created_at, i.e. when this tool first
+        // saw the job. That is deliberately a separate column from "Posted",
+        // which is when the employer posted it. Indeed, Naukri and Cutshort
+        // supply a real posting time; Instahyre supplies none.
         function renderFoundTimes() {
             document.querySelectorAll('.found-cell').forEach(function(cell) {
                 const raw = cell.dataset.created;
                 cell.textContent = raw ? formatTimeAgo(raw) : "-";
+            });
+            // Real posting time, where the site publishes one. Instahyre never
+            // does, so those rows stay "-" rather than borrowing created_at and
+            // pretending it is a posting date.
+            document.querySelectorAll('.posted-cell').forEach(function(cell) {
+                const raw = cell.dataset.posted;
+                if (!raw) { cell.textContent = "-"; cell.classList.add('posted-unknown'); return; }
+                cell.textContent = formatTimeAgo(raw);
+                const days = (Date.now() - new Date(raw).getTime()) / 86400000;
+                cell.classList.remove('posted-fresh','posted-ok','posted-stale');
+                cell.classList.add(days <= 3 ? 'posted-fresh' : days <= 14 ? 'posted-ok' : 'posted-stale');
             });
         }
 
@@ -565,6 +583,14 @@
             <option value="3d" {% if current_posted_within == '3d' %}selected{% endif %}>Found: last 3 days</option>
             <option value="7d" {% if current_posted_within == '7d' %}selected{% endif %}>Found: last 7 days</option>
         </select>
+        <select name="max_exp" onchange="applyFilter()" title="Hide roles whose stated minimum experience is above this">
+            <option value="all" {% if current_max_exp == 'all' %}selected{% endif %}>Any experience</option>
+            <option value="2" {% if current_max_exp == '2' %}selected{% endif %}>Needs 2 yrs or less</option>
+            <option value="3" {% if current_max_exp == '3' %}selected{% endif %}>Needs 3 yrs or less</option>
+            <option value="4" {% if current_max_exp == '4' %}selected{% endif %}>Needs 4 yrs or less</option>
+            <option value="5" {% if current_max_exp == '5' %}selected{% endif %}>Needs 5 yrs or less</option>
+            <option value="7" {% if current_max_exp == '7' %}selected{% endif %}>Needs 7 yrs or less</option>
+        </select>
         <input type="search" name="q" value="{{ current_q }}" placeholder="Search title or company"
                onkeydown="if(event.key==='Enter'){applyFilter();}"
                style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; min-width: 200px;">
@@ -578,13 +604,14 @@
                 <th>Company</th>
                 <th>Location</th>
                 <th>Mode</th>
+                <th>Exp</th>
+                <th>Posted</th>
                 <th>Found</th>
                 <th>Source</th>
                 <th>Status</th>
                 <th>Description</th>
                 <th>Resume</th>
                 <th>Relevance</th>
-                <th>Posted</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -594,7 +621,9 @@
                 <td><a href="/job/{{ job.id }}?source={{ current_source }}&status={{ current_status }}&relevant={{ current_relevant }}">{{ job.title }}</a></td>
                 <td class="company">{{ job.company }}</td>
                 <td>{{ job.location }}</td>
-                <td><span class="mode-tag mode-{{ job.location|work_mode }}">{{ job.location|work_mode }}</span></td>
+                <td><span class="mode-tag mode-{{ job|job_mode }}">{{ job|job_mode }}</span></td>
+                <td class="exp-cell">{% if job.exp_min is not none %}{{ job.exp_min }}{% if job.exp_max %}-{{ job.exp_max }}{% else %}+{% endif %} yrs{% else %}<span style="color:#bbb">-</span>{% endif %}</td>
+                <td class="posted-cell" data-posted="{{ job.posted_date or '' }}" title="{{ job.posted_date or 'this site does not publish a posting date' }}">-</td>
                 <td class="found-cell" data-created="{{ job.created_at or '' }}" title="{{ job.created_at or 'unknown' }}">-</td>
                 <td><span class="source-tag">{{ job.source }}</span></td>
                 <td><span class="badge badge-{{ job.status.value }}">{{ job.status.value }}</span></td>
@@ -621,7 +650,6 @@
                     {% endif %}
                 </td>
                 <td>{% if job.title|relevant %}<span class="badge badge-new">Yes</span>{% else %}<span class="badge badge-irrelevant">No</span>{% endif %}</td>
-                <td>{{ job.posted_date or '-' }}</td>
                 <td>
                     <div style="display: flex; gap: 8px; align-items: center;">
                         <a href="/job/{{ job.id }}?source={{ current_source }}&status={{ current_status }}&relevant={{ current_relevant }}" style="font-size: 13px;">View</a>

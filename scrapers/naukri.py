@@ -2,6 +2,7 @@ from playwright.async_api import Page
 
 from scrapers.base import BaseScraper
 from utils.browser import human_like_scroll, random_delay
+from utils.posted import from_relative_text, parse_experience_text
 
 
 class NaukriScraper(BaseScraper):
@@ -54,14 +55,45 @@ class NaukriScraper(BaseScraper):
                 salary_el = card.locator("span[class*='sal'], li[class*='salary'], span[class*='salWdth']").first
                 salary = await salary_el.inner_text() if await salary_el.count() > 0 else None
 
+                # Naukri prints "3 days ago" / "Just now" / "30+ days ago" in a
+                # small element at the bottom of each card. Several class names
+                # are tried because Naukri renames them periodically; an
+                # unrecognised string parses to None rather than to a wrong date.
+                posted = None
+                posted_el = card.locator(
+                    "span.job-post-day, span[class*='job-post-day'], "
+                    "span[class*='postedDate'], span[class*='posted'], "
+                    "span[class*='freshness'], span[class*='jobPostDay']"
+                ).first
+                if await posted_el.count() > 0:
+                    posted = from_relative_text(await posted_el.inner_text())
+
+                # Naukri states experience as "2-5 Yrs" in <span class="expwdth">,
+                # carried in both the text and the title attribute. The attribute
+                # is preferred because the visible text can be truncated by CSS.
+                # Falls back to the title, which often reads "... (2-3 Years)".
+                exp_min = exp_max = None
+                exp_el = card.locator(
+                    "span.expwdth, span[class*='expwdth'], "
+                    "span[class*='exp-wrap'], li[class*='experience']"
+                ).first
+                if await exp_el.count() > 0:
+                    raw = await exp_el.get_attribute("title") or await exp_el.inner_text()
+                    exp_min, exp_max = parse_experience_text(raw)
+                if exp_min is None:
+                    exp_min, exp_max = parse_experience_text(title)
+
                 if title and url:
                     jobs.append({
+                        "exp_min": exp_min,
+                        "exp_max": exp_max,
                         "title": title.strip(),
                         "company": company.strip(),
                         "location": location.strip(),
                         "source": self.name,
                         "source_url": url.strip(),
                         "salary_range": salary.strip() if salary else None,
+                        "posted_date": posted,
                     })
             except Exception:
                 continue

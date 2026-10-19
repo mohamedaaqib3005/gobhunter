@@ -75,23 +75,52 @@ class InstahyreScraper(BaseScraper):
         except Exception:
             return None
 
+    # The API rejects a comma-joined query with HTTP 400, so each search term
+    # is sent as its own request. Verified against the live endpoint:
+    #   skills="React Developer,Frontend Developer,..."  -> 400 Bad Request
+    #   skills="React Developer"                         -> 200, 35 jobs
+    #
+    # It also caps each response at 35 regardless of the `limit` asked for,
+    # so volume comes from paging with `offset`, and it ignores `location`
+    # entirely: React in Bangalore, in Bengaluru and with no location all
+    # return the same total_count of 1634. Looping over locations therefore
+    # fired three identical requests; it now loops over search terms instead.
+    PAGE_SIZE = 35
+    MAX_PAGES = 3
+
     async def search(self, page: Page, query: str, locations: list[str]) -> list[dict]:
-        """Search jobs using Instahyre's public REST API."""
+        """Search jobs using Instahyre's public REST API, one term at a time."""
         all_jobs = []
         seen_urls = set()
 
-        for loc in locations:
+        terms = [t.strip() for t in str(query).split(",") if t.strip()]
+        if not terms:
+            terms = [str(query).strip()]
+        loc = locations[0] if locations else "Bangalore"
+
+        requests = [(t, i) for t in terms for i in range(self.MAX_PAGES)]
+        exhausted: set[str] = set()
+
+        for term, page_index in requests:
+            if term in exhausted:
+                continue
             params = {
-                "skills": query,
+                "skills": term,
                 "location": loc,
                 "search": "true",
-                "offset": 0,
-                "limit": 50,
+                "offset": page_index * self.PAGE_SIZE,
+                "limit": self.PAGE_SIZE,
             }
             api_url = f"{self.api_base}/job_search?{urllib.parse.urlencode(params)}"
             data = await self._http_get_json(page, api_url)
 
+            # A 400 or an unexpected shape means this term is no good; stop
+            # paging it rather than firing the remaining requests.
             if not data or "objects" not in data:
+                exhausted.add(term)
+                continue
+            if not data["objects"]:
+                exhausted.add(term)
                 continue
 
             for obj in data.get("objects", []):

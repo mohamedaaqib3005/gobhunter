@@ -8,6 +8,7 @@ from playwright.async_api import Page
 
 from scrapers.base import BaseScraper
 from utils.browser import human_like_scroll, random_delay
+from utils.posted import from_epoch_ms, from_relative_text, parse_experience_text
 
 
 def _clean_html_description(html_content: str) -> str:
@@ -105,7 +106,15 @@ class IndeedScraper(BaseScraper):
                                     location: (c.formattedLocation || 'Bangalore/Remote').trim(),
                                     url: jobUrl,
                                     salary: salary,
-                                    skills: skills
+                                    skills: skills,
+                                    // createDate is the posting time, in epoch
+                                    // milliseconds. pubDate is deliberately not
+                                    // read: it runs up to 2 days older and is
+                                    // rounded to a fixed hour. See utils/posted.py.
+                                    postedMs: c.createDate || null,
+                                    postedText: c.formattedRelativeTime || null,
+                                    expired: c.expired === true,
+                                    sponsored: c.sponsored === true
                                 });
                             }
                         }
@@ -138,6 +147,15 @@ class IndeedScraper(BaseScraper):
                         const salEl = card.querySelector('[data-testid="job-salary"], .salary-snippet-container');
                         const salary = salEl ? salEl.innerText.trim() : null;
 
+                        // Indeed prints "Posted 5 days ago" / "Just posted" in a
+                        // date element. Class names change, so several are tried
+                        // and the raw string is parsed on the Python side.
+                        const dateEl = card.querySelector(
+                            '[data-testid="myJobsStateDate"], .date, span.date, ' +
+                            '[class*="jobMetaDataGroup"] span, [class*="result-footer"] span'
+                        );
+                        const postedText = dateEl ? dateEl.innerText.trim() : null;
+
                         if (title && url) {
                             list.push({
                                 title: title,
@@ -145,6 +163,10 @@ class IndeedScraper(BaseScraper):
                                 location: location,
                                 url: url,
                                 salary: salary,
+                                postedMs: null,
+                                postedText: postedText,
+                                expired: false,
+                                sponsored: false,
                                 skills: []
                             });
                         }
@@ -163,10 +185,26 @@ class IndeedScraper(BaseScraper):
                 "source": self.name,
                 "source_url": item["url"],
                 "salary_range": item.get("salary"),
+                # createDate first, since it is exact. The relative string is
+                # the fallback for the DOM path and for any card where the
+                # JSON field is missing or zero.
+                "posted_date": (
+                    from_epoch_ms(item.get("postedMs"))
+                    or from_relative_text(item.get("postedText"))
+                ),
+                # Indeed states no experience anywhere on its job cards:
+                # jobCardRequirementsModel holds skills, and taxonomyAttributes
+                # holds job type, shift, remote and benefits. The title is the
+                # only place it ever appears, and usually it does not.
+                **dict(zip(("exp_min", "exp_max"),
+                           parse_experience_text(item["title"]))),
                 "key_skills": item.get("skills", []),
             }
             for item in results
-            if item.get("title") and item.get("url")
+            # An expired listing cannot be applied to, so it is dropped here
+            # rather than stored and filtered later. Indeed states this
+            # directly; we are not inferring it from age.
+            if item.get("title") and item.get("url") and not item.get("expired")
         ]
 
     async def fetch_description(self, page: Page, url: str) -> str | None:

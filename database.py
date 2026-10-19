@@ -6,6 +6,7 @@ from urllib.parse import parse_qs, urlparse
 
 from config import is_relevant_title
 from models import Job, JobStatus
+from utils.posted import parse_experience_from_description
 
 DB_PATH = Path(__file__).parent / "jobs.db"
 
@@ -66,6 +67,19 @@ def classify_work_mode(location: str | None) -> str:
             return "hybrid"
         return "remote"
     return "onsite"
+
+
+def job_work_mode(job: "Job") -> str:
+    """Work mode for one job, trusting the site over our inference.
+
+    Cutshort states `remoteType` outright. Everyone else leaves us guessing
+    from the location string, which is why `classify_work_mode` exists at all.
+    Where a site tells us, believe it.
+    """
+    stated = getattr(job, "remote_mode", None)
+    if stated:
+        return stated
+    return classify_work_mode(job.location)
 
 
 def matches_city(location: str | None, city_key: str) -> bool:
@@ -135,6 +149,9 @@ def init_db() -> None:
         row["name"] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()
     }
     new_columns = {
+        "exp_min": "INTEGER",
+        "exp_max": "INTEGER",
+        "remote_mode": "TEXT",
         "resume_path": "TEXT",
         "resume_job_id": "TEXT",
         "resume_status": "TEXT DEFAULT 'none'",
@@ -336,11 +353,13 @@ def insert_job(job: Job) -> int | None:
         cursor = conn.execute("""
             INSERT INTO jobs (title, company, location, source, source_url,
                               description, salary_range, posted_date, status,
+                              exp_min, exp_max, remote_mode,
                               created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             job.title, job.company, job.location, job.source, job.source_url,
             job.description, job.salary_range, job.posted_date, job.status.value,
+            job.exp_min, job.exp_max, job.remote_mode,
             now, now,
         ))
         conn.commit()
@@ -384,18 +403,26 @@ def get_jobs(
     work_mode: str | None = None,
     posted_within: str | None = None,
     search: str | None = None,
+    max_exp_years: int | None = None,
     limit: int = 500,
     offset: int = 0,
 ) -> list[Job]:
-    """Jobs matching every supplied filter, newest first.
+    """Jobs matching every supplied filter, most recently POSTED first.
 
-    `city`, `work_mode` and `posted_within` are the dashboard's new filters.
+    `city`, `work_mode` and `posted_within` are the dashboard's filters.
 
-    IMPORTANT: `posted_within` filters on `created_at`, which is when this tool
-    first SAW the job, not when the employer posted it. No scraper populates
-    `posted_date`, so a real posting time is not available. Jobs arrive in
-    batches, so a 30-minute window shows the most recent scrape rather than
-    genuinely fresh postings.
+    Ordering and `posted_within` both work off `posted_date`, the time the
+    employer posted the job, which Indeed, Naukri and Cutshort now provide.
+    They used to work off `created_at`, the time this tool first saw the job.
+    That was all there was before posting times were captured, but it ranked
+    by scrape batch, so whichever query ran last sat at the top of the page
+    regardless of how old those jobs were.
+
+    Rows with no `posted_date` sort to the BOTTOM rather than the top, and a
+    `posted_within` window excludes them entirely. An unknown posting time is
+    not evidence of freshness, so it cannot satisfy "posted in the last hour".
+    This permanently excludes Instahyre from those windows, because Instahyre
+    publishes no date on any endpoint.
     """
     conn = get_conn()
     query = "SELECT * FROM jobs WHERE 1=1"
@@ -416,11 +443,22 @@ def get_jobs(
         cutoff = datetime.now(timezone.utc) - timedelta(
             minutes=POSTED_WITHIN_MINUTES[posted_within]
         )
-        # created_at is stored as an ISO-8601 UTC string, which sorts and
-        # compares correctly as text.
-        query += " AND created_at >= ?"
+        # julianday() rather than string comparison: posted_date arrives in two
+        # shapes, with microseconds from Naukri and without from Indeed, so
+        # comparing the raw text is not reliable. Rows with no date are
+        # excluded, since unknown is not the same as recent.
+        query += (
+            " AND posted_date IS NOT NULL AND posted_date != ''"
+            " AND julianday(posted_date) >= julianday(?)"
+        )
         params.append(cutoff.isoformat())
-    query += " ORDER BY created_at DESC"
+    # Most recently posted first. The first term pushes undated rows to the
+    # bottom instead of letting NULL masquerade as the newest value.
+    query += (
+        " ORDER BY (posted_date IS NULL OR posted_date = '') ASC,"
+        " julianday(posted_date) DESC,"
+        " created_at DESC"
+    )
     rows = conn.execute(query, params).fetchall()
     conn.close()
 
@@ -430,7 +468,14 @@ def get_jobs(
     if city and city != "all":
         jobs = [j for j in jobs if matches_city(j.location, city)]
     if work_mode and work_mode != "all":
-        jobs = [j for j in jobs if classify_work_mode(j.location) == work_mode]
+        jobs = [j for j in jobs if job_work_mode(j) == work_mode]
+    if max_exp_years is not None:
+        # Keep a job when its stated minimum is within reach, and keep every
+        # job that states nothing. Silence is not a reason to discard.
+        jobs = [
+            j for j in jobs
+            if j.exp_min is None or j.exp_min <= max_exp_years
+        ]
     return jobs[offset:offset + limit]
 
 
@@ -494,6 +539,20 @@ def update_job_scraped_details(
     if description is not None:
         fields.append("description = ?")
         params.append(description)
+        # Indeed and LinkedIn state no experience on their job cards, but the
+        # description almost always does. Filled only when the column is
+        # currently empty, so a figure the site stated directly (Naukri's
+        # expwdth, Cutshort's expRange) is never overwritten by text parsing.
+        existing = conn.execute(
+            "SELECT exp_min FROM jobs WHERE id = ?", (job_id,)
+        ).fetchone()
+        if existing is not None and existing["exp_min"] is None:
+            exp_min, exp_max = parse_experience_from_description(description)
+            if exp_min is not None:
+                fields.append("exp_min = ?")
+                params.append(exp_min)
+                fields.append("exp_max = ?")
+                params.append(exp_max)
     if salary_range is not None:
         fields.append("salary_range = ?")
         params.append(salary_range)
@@ -639,4 +698,7 @@ def _row_to_job(row: sqlite3.Row) -> Job:
         # and the time filters both depend on this.
         created_at=row["created_at"] if "created_at" in keys else None,
         updated_at=row["updated_at"] if "updated_at" in keys else None,
+        exp_min=row["exp_min"] if "exp_min" in keys else None,
+        exp_max=row["exp_max"] if "exp_max" in keys else None,
+        remote_mode=row["remote_mode"] if "remote_mode" in keys else None,
     )

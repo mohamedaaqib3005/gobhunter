@@ -9,6 +9,7 @@ from playwright.async_api import Page
 
 from scrapers.base import BaseScraper
 from utils.browser import human_like_scroll, random_delay
+from utils.posted import from_object_id, normalise_remote_type, parse_experience
 
 
 def _clean_html_description(html_content: str) -> str:
@@ -181,6 +182,20 @@ class CutshortScraper(BaseScraper):
                 if not isinstance(skills, list) and isinstance(j.get("allSkillsObj"), dict):
                     skills = list(j["allSkillsObj"].values())
 
+                # Cutshort's `_id` is a MongoDB ObjectId, and the first four
+                # bytes of every ObjectId are a Unix timestamp. That gives an
+                # exact posting time, to the second, with no extra request.
+                posted = from_object_id(j.get("_id"))
+
+                # It also states work mode and required experience outright, so
+                # for Cutshort we read the real values instead of guessing from
+                # the location string.
+                exp_range = j.get("expRange") or {}
+                exp_min, exp_max = parse_experience(
+                    exp_range.get("min"), exp_range.get("max")
+                )
+                remote_mode = normalise_remote_type(j.get("remoteType"))
+
                 all_jobs.append({
                     "title": title,
                     "company": company,
@@ -190,6 +205,10 @@ class CutshortScraper(BaseScraper):
                     "salary_range": salary,
                     "key_skills": skills if isinstance(skills, list) else [],
                     "description": desc,
+                    "posted_date": posted,
+                    "exp_min": exp_min,
+                    "exp_max": exp_max,
+                    "remote_mode": remote_mode,
                 })
 
             await random_delay(0.5, 1.0)

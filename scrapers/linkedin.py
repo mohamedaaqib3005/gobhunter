@@ -9,6 +9,7 @@ from playwright.async_api import Page
 
 from scrapers.base import BaseScraper
 from utils.browser import human_like_scroll, random_delay
+from utils.posted import from_linkedin_time
 
 
 def _clean_html_description(html_content: str) -> str:
@@ -147,7 +148,21 @@ class LinkedInScraper(BaseScraper):
                     }
 
                     if (title && url) {
-                        results.push({ title, company, location, url, salary });
+                        // LinkedIn's <time> element carries two values: its text
+                        // says "30 minutes ago" while a posting is fresh, and its
+                        // datetime attribute is day precision. Both are returned
+                        // and the Python side prefers the text.
+                        let postedText = null, postedAttr = null;
+                        const timeEl = card.querySelector(
+                            'time.job-search-card__listdate, time.job-search-card__listdate--new, ' +
+                            'time[datetime], .job-search-card__listdate, [class*="listdate"]'
+                        );
+                        if (timeEl) {
+                            postedText = (timeEl.innerText || '').trim() || null;
+                            postedAttr = timeEl.getAttribute('datetime');
+                        }
+
+                        results.push({ title, company, location, url, salary, postedText, postedAttr });
                     }
                 }
                 return results;
@@ -163,6 +178,9 @@ class LinkedInScraper(BaseScraper):
                 "source": self.name,
                 "source_url": _clean_job_url(item["url"]),
                 "salary_range": item.get("salary"),
+                "posted_date": from_linkedin_time(
+                    item.get("postedText"), item.get("postedAttr")
+                ),
             })
         return jobs
 

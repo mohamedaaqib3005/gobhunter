@@ -13,6 +13,7 @@ from config import is_relevant_title
 from database import (
     CITY_ALIASES,
     classify_work_mode,
+    job_work_mode,
     get_job,
     get_job_by_resume_job_id,
     get_jobs,
@@ -77,10 +78,15 @@ app = FastAPI(
     openapi_tags=tags_metadata,
 )
 
+# The city the dashboard opens on when the URL names none. Must be a key in
+# CITY_ALIASES, or "all" for no default filter.
+DEFAULT_CITY = "bangalore"
+
 templates_dir = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(templates_dir))
 templates.env.filters["relevant"] = is_relevant_title
 templates.env.filters["work_mode"] = classify_work_mode
+templates.env.filters["job_mode"] = job_work_mode
 
 
 # ==========================================
@@ -103,14 +109,22 @@ async def index(
     work_mode: str | None = Query(None, description="'remote', 'hybrid', 'onsite' or 'unknown'"),
     posted_within: str | None = Query(None, description="Time window: 30m, 1h, 24h, 3d, 7d"),
     q: str | None = Query(None, description="Search job title or company"),
+    max_exp: str | None = Query(None, description="Hide roles demanding more than N years"),
 ):
     filter_source = source if source and source != "all" else None
     filter_status = status if status and status != "all" else None
     filter_relevant = relevant != "all"
-    filter_city = city if city and city != "all" else None
+    # Bangalore unless the URL says otherwise. `city=all` turns it off, so the
+    # dropdown can still reach every city; only the unset default changes.
+    effective_city = city if city else DEFAULT_CITY
+    filter_city = effective_city if effective_city != "all" else None
     filter_mode = work_mode if work_mode and work_mode != "all" else None
     filter_within = posted_within if posted_within and posted_within != "all" else None
     search = q.strip() if q and q.strip() else None
+    try:
+        exp_cap = int(max_exp) if max_exp and max_exp != "all" else None
+    except ValueError:
+        exp_cap = None
 
     jobs = get_jobs(
         source=filter_source,
@@ -120,6 +134,7 @@ async def index(
         work_mode=filter_mode,
         posted_within=filter_within,
         search=search,
+        max_exp_years=exp_cap,
     )
     stats = get_stats()
     last_scrape = get_last_scrape_run()
@@ -132,10 +147,11 @@ async def index(
         "current_source": source or "all",
         "current_status": status or "all",
         "current_relevant": relevant or "true",
-        "current_city": city or "all",
+        "current_city": effective_city,
         "current_work_mode": work_mode or "all",
         "current_posted_within": posted_within or "all",
         "current_q": search or "",
+        "current_max_exp": max_exp or "all",
         "cities": list(CITY_ALIASES.keys()),
         "sources": ["indeed", "naukri",  "instahyre", "cutshort", "linkedin", "wellfound"],
     })

@@ -11,8 +11,9 @@ from pydantic_settings import BaseSettings
 # "Engineer 2" and "Developer III", but \b[2-9]\b also matches the numbers in
 # "Frontend Developer (3-5 yrs)", which is how Naukri titles a large share of
 # its postings. One query went from 0 saved to 81 saved without them.
-_SENIORITY = r"Senior|Sr|Staff|Principal|Lead"
+_SENIORITY = r""
 _LEVEL_2UP = r"II|III|IV|V"
+
 
 def _build_title_patterns(settings: "Settings") -> list[re.Pattern]:
     include_keywords = [kw.strip() for kw in settings.include_keywords.split(",") if kw.strip()]
