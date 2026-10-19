@@ -228,19 +228,50 @@
         let isCurrentlyScraping = false;
         let pollInterval = null;
 
+        // Age as text, relative all the way out. It used to stop at 24 hours
+        // and print an absolute date ("Oct 18, 08:55 PM"), which is the one
+        // thing you cannot read at a glance when scanning for fresh postings.
+        // The exact timestamp stays available as the element's tooltip.
         function formatTimeAgo(isoString) {
             if (!isoString) return "Never";
             const date = new Date(isoString);
             if (isNaN(date.getTime())) return isoString;
-            const now = new Date();
-            const diffSec = Math.floor((now - date) / 1000);
-            if (diffSec < 5) return "Just now";
-            if (diffSec < 60) return `${diffSec}s ago`;
-            const diffMin = Math.floor(diffSec / 60);
-            if (diffMin < 60) return `${diffMin}m ago`;
-            const diffHours = Math.floor(diffMin / 60);
-            if (diffHours < 24) return `${diffHours}h ago`;
-            return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+            let sec = Math.floor((new Date() - date) / 1000);
+            // A clock skew of a few minutes should read as "just now", not as
+            // a negative age or a date in the future.
+            if (sec < 0) sec = 0;
+
+            if (sec < 45) return "Just now";
+            if (sec < 90) return "1 min ago";
+
+            const min = Math.round(sec / 60);
+            if (min < 60) return `${min} mins ago`;
+
+            const hours = Math.round(min / 60);
+            if (hours === 1) return "1 hour ago";
+            if (hours < 24) return `${hours} hours ago`;
+
+            const days = Math.round(hours / 24);
+            if (days === 1) return "Yesterday";
+            if (days < 7) return `${days} days ago`;
+
+            const weeks = Math.round(days / 7);
+            if (weeks === 1) return "1 week ago";
+            if (days < 30) return `${weeks} weeks ago`;
+
+            const months = Math.round(days / 30);
+            if (months === 1) return "1 month ago";
+            if (days < 365) return `${months} months ago`;
+
+            const years = Math.round(days / 365);
+            return years === 1 ? "1 year ago" : `${years} years ago`;
+        }
+
+        // Full timestamp in the viewer's own timezone, for the tooltip.
+        function exactTime(isoString) {
+            const date = new Date(isoString);
+            return isNaN(date.getTime()) ? isoString : date.toLocaleString();
         }
 
         function updateLastUpdatedDisplay() {
@@ -459,6 +490,7 @@
             document.querySelectorAll('.found-cell').forEach(function(cell) {
                 const raw = cell.dataset.created;
                 cell.textContent = raw ? formatTimeAgo(raw) : "-";
+                if (raw) cell.title = exactTime(raw);
             });
             // Real posting time, where the site publishes one. Instahyre never
             // does, so those rows stay "-" rather than borrowing created_at and
@@ -467,6 +499,7 @@
                 const raw = cell.dataset.posted;
                 if (!raw) { cell.textContent = "-"; cell.classList.add('posted-unknown'); return; }
                 cell.textContent = formatTimeAgo(raw);
+                cell.title = exactTime(raw);
                 const days = (Date.now() - new Date(raw).getTime()) / 86400000;
                 cell.classList.remove('posted-fresh','posted-ok','posted-stale');
                 cell.classList.add(days <= 3 ? 'posted-fresh' : days <= 14 ? 'posted-ok' : 'posted-stale');

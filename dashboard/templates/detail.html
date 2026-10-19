@@ -133,7 +133,13 @@
             <span>📍 {{ job.location }}</span>
             <span>🌐 {{ job.source }}</span>
             {% if job.salary_range %}<span id="salary-badge">💰 {{ job.salary_range }}</span>{% endif %}
-            {% if job.posted_date %}<span>📅 Posted: {{ job.posted_date }}</span>{% endif %}
+            {# The raw value is carried in a data attribute and rendered as an
+               age by the script below, so this reads "Posted 3 days ago"
+               rather than a bare ISO timestamp. The exact time is the tooltip. #}
+            {% if job.posted_date %}<span class="ago-cell" data-ago="{{ job.posted_date }}" data-prefix="📅 Posted ">📅 Posted: {{ job.posted_date|string|truncate(10, True, "") }}</span>{% endif %}
+            {% if job.created_at %}<span class="ago-cell" data-ago="{{ job.created_at }}" data-prefix="🔍 Found ">🔍 Found: {{ job.created_at|string|truncate(10, True, "") }}</span>{% endif %}
+            {% if job.applied_date %}<span class="ago-cell" data-ago="{{ job.applied_date }}" data-prefix="✅ Applied ">✅ Applied: {{ job.applied_date|string|truncate(10, True, "") }}</span>{% endif %}
+            {% if job.exp_min is not none %}<span>🧭 {{ job.exp_min }}{% if job.exp_max %}-{{ job.exp_max }}{% else %}+{% endif %} yrs</span>{% endif %}
         </div>
 
         <!-- Shapeshifter Custom Resume Section -->
@@ -251,6 +257,60 @@
     </div>
 
     <script>
+        // Same age formatting as the dashboard table, so "3 days ago" means
+        // the same thing on both pages. Rendered client side because it is
+        // relative to the moment you are looking at it, and it refreshes on a
+        // timer so a page left open does not keep claiming "2 mins ago".
+        function formatTimeAgo(isoString) {
+            if (!isoString) return "";
+            const date = new Date(isoString);
+            if (isNaN(date.getTime())) return isoString;
+
+            let sec = Math.floor((new Date() - date) / 1000);
+            if (sec < 0) sec = 0;
+
+            if (sec < 45) return "just now";
+            if (sec < 90) return "1 min ago";
+
+            const min = Math.round(sec / 60);
+            if (min < 60) return `${min} mins ago`;
+
+            const hours = Math.round(min / 60);
+            if (hours === 1) return "1 hour ago";
+            if (hours < 24) return `${hours} hours ago`;
+
+            const days = Math.round(hours / 24);
+            if (days === 1) return "yesterday";
+            if (days < 7) return `${days} days ago`;
+
+            const weeks = Math.round(days / 7);
+            if (weeks === 1) return "1 week ago";
+            if (days < 30) return `${weeks} weeks ago`;
+
+            const months = Math.round(days / 30);
+            if (months === 1) return "1 month ago";
+            if (days < 365) return `${months} months ago`;
+
+            const years = Math.round(days / 365);
+            return years === 1 ? "1 year ago" : `${years} years ago`;
+        }
+
+        function renderAgoCells() {
+            document.querySelectorAll('.ago-cell').forEach(function(el) {
+                const raw = el.dataset.ago;
+                if (!raw) return;
+                const d = new Date(raw);
+                if (isNaN(d.getTime())) return;   // leave the original text alone
+                el.textContent = (el.dataset.prefix || "") + formatTimeAgo(raw);
+                el.title = d.toLocaleString();
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            renderAgoCells();
+            setInterval(renderAgoCells, 60000);
+        });
+
         let resumePollInterval = null;
 
         async function fetchDescription(jobId) {
