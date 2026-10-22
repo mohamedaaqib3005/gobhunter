@@ -1,109 +1,160 @@
 # Mohamed Aaqib
 
-<!--
-  Shape Shifter profile. The AI builds every tailored resume from this file only,
-  so it can select and rephrase what is here but must never add anything that is not.
-  Add freely: extra projects, skills, tools, achievements or roles that did not fit on
-  one resume. More detail gives the AI more to choose from for each job.
--->
+Software Development Engineer
+Bengaluru, Karnataka, India
 
 ## Contact
 
-- **Headline:** Full Stack Developer
-- **Location:** Bengaluru, Karnataka, India
-- **Phone:** +91 8553255805
-- **Email:** drop.mohamedaaqib@gmail.com
-- **LinkedIn:** https://linkedin.com/in/mohamed-aaqib3005
-- **GitHub:** https://github.com/mohamedaaqib3005
+- Email: drop.mohamedaaqib@gmail.com
+- Phone: +91 8553255805
+- LinkedIn: https://www.linkedin.com/in/mohamed-aaqib3005/
+- GitHub: https://github.com/mohamedaaqib3005
+- Location: Bengaluru, Karnataka, India
 
 ## Summary
 
-Full Stack Developer with 2+ years of experience building scalable web and mobile applications using React.js, Next.js, React Native, Node.js, and PostgreSQL. Skilled in developing RESTful APIs, responsive and accessible (WCAG-compliant) user interfaces, and performance-optimized, SEO-friendly platforms with server-side rendering. Experienced across the full development lifecycle, from internal tooling and CRM systems to client-facing production applications.
+Frontend-focused Software Development Engineer with 3+ years of experience building
+and improving production web applications using React.js, Next.js, JavaScript,
+TypeScript, and Tailwind CSS. Experienced in translating product and client
+requirements into responsive interfaces, reusable component systems, and
+maintainable applications. Focus areas include frontend architecture, Core Web
+Vitals, technical SEO, accessibility, analytics integration, and API-driven
+experiences, with additional experience across Node.js, Express.js, REST APIs,
+relational and document databases, and cloud deployment.
 
 ## Skills
 
-- **Frontend:** React.js, Next.js, TypeScript, JavaScript (ES6+), HTML5, CSS3, Tailwind CSS, ShadCN UI, Storybook, Design Systems, Atomic Design, Reusable Components, Responsive Design, Cross-Browser Compatibility, WCAG Accessibility, Figma
-- **Mobile and state:** React Native, Redux
-- **Backend, data and CMS:** Node.js, Express.js, RESTful APIs, PostgreSQL, MongoDB, AWS S3, WordPress
-- **Performance and SEO:** SSR (Server-Side Rendering), Performance Optimization, Core Web Vitals, Technical SEO, SEO Optimization, AI Search Visibility, AI SEO
-- **Ways of working:** Cross-Functional Collaboration
+**Frontend:** React.js, Next.js, JavaScript (ES6+), TypeScript, HTML5, CSS3,
+Tailwind CSS, Redux, Responsive Web Design, Component-Based UI Development,
+Reusable Components, Cross-Browser Compatibility
+
+**Architecture and quality:** Modular Frontend Architecture, Design Systems,
+Atomic Design, Storybook, WCAG Accessibility Practices, Semantic HTML,
+Server-Side Rendering (SSR)
+
+**Performance and SEO:** Core Web Vitals, Frontend Performance Optimization,
+Image Optimization, Lazy Loading, Code Splitting, Technical SEO, Metadata
+Optimization, Sitemap Generation, Structured Data
+
+**Backend and APIs:** Node.js, Express.js, RESTful APIs, API Integration, FastAPI
+
+**Databases:** PostgreSQL, MongoDB, Redis, SQLite
+
+**Cloud and tools:** Amazon S3, Vercel, Postman, Jest, Playwright, Puppeteer,
+Git, GitHub, Google Tag Manager, Google Analytics, Figma
+
+**CMS:** WordPress, Headless CMS, Shopify
+
+**Other:** React Native, Python, Beautiful Soup, React PDF Renderer, Astro
 
 ## Experience
 
 ### Software Development Engineer | Geekwerke
+Mar 2025 - Present
 
-- **Dates:** Mar 2025 to Present
-
-- Develop scalable full-stack web and mobile applications using React.js, Next.js, React Native, TypeScript, JavaScript, Redux, and PostgreSQL.
-- Implement responsive design, RESTful APIs, and clean, modular code following modern UX principles and cross-browser compatibility standards.
-- Deliver WCAG-compliant, accessible user experiences with a focus on performance optimization and scalability.
-- Built the business consultancy platform to WCAG 2.1 AA standards, reaching a Lighthouse accessibility score of 95+ with zero critical axe violations, by architecting a design system on Atomic Design principles with contrast-compliant tokens, semantic HTML5 landmarks, ARIA labeling, and keyboard-navigable focus states baked into every component and documented in Storybook.
-- Designed and developed an events organiser platform from scratch on Next.js with server-side rendering (SSR) and Tailwind CSS, improving Largest Contentful Paint by 55% and First Contentful Paint by 45%, by implementing image optimization, font preloading, and route-level code splitting alongside technical SEO fundamentals including structured data and dynamic meta tags.
-- Delivered websites and cross-platform mobile apps for multiple news brands using React and React Native, increasing click-through rate by 30%, by implementing dynamic content rendering and iterating on UI hierarchy and navigation patterns against engagement data captured through Google Tag Manager and Google Analytics.
-- Shipped an education gaming platform, by implementing centralized Redux state management for session, scoring, and progression logic across the React application.
+- Built a modular business consultancy website from scratch using Astro, React, a
+  headless CMS, Storybook, and Atomic Design principles, with a focus on reusable
+  components and WCAG accessibility.
+- Improved LCP and FCP by 60% for a UAE-based event organizer by building and
+  deploying a Next.js SSR application on Vercel, using Tailwind CSS, technical SEO,
+  and performance best practices.
+- Implemented AI-search visibility best practices, including structured data, for
+  the UAE-based event organizer website.
+- Refined React-based news experiences and integrated Google Tag Manager and Google
+  Analytics, contributing to a reported 30% increase in click-through rate.
+- Developed features for an education-focused gaming website using React and Redux.
+- Wrote unit tests with Jest.
 
 ### Software Engineer | Backpackers United
+Aug 2023 - Mar 2025
 
-- **Dates:** Aug 2023 to Mar 2025
-
-- Built a scalable travel platform using Next.js, React.js, Node.js, and Express.js with SSR and SEO optimization, improving page speed by 30–40% and organic traffic by 200%.
-- Developed an internal CRM with Role-Based Access Control (RBAC), analytics dashboards, and AWS S3 integration.
-- Built a PDF generator for automated client itinerary creation.
+- Built a travel platform from scratch using Next.js, React.js, and REST APIs,
+  creating reusable UI components and dynamic travel pages.
+- Designed the travel website in Figma and developed the design into the working
+  platform, using MongoDB as the database and deploying on Vercel.
+- Integrated Razorpay as the payment gateway and implemented custom booking flows
+  based on travel itineraries.
+- Improved page speed by 30-40% through image and media optimization, lazy loading,
+  code splitting, and frontend performance improvements.
+- Increased organic traffic by 200% through technical SEO improvements, including
+  metadata optimization and sitemap generation.
+- Developed an internal CRM with role-based access, dashboards, and operational
+  workflows, integrating Amazon S3 for scalable asset and file management.
+- Built a dynamic travel-itinerary PDF generator using React PDF Renderer to
+  automate document creation for client-facing travel workflows.
 
 ### Front-End Developer | AffinityX
+Dec 2022 - Aug 2023
 
-- **Dates:** Dec 2022 to Aug 2023
-
-- Developed responsive React.js and WordPress websites for GoDaddy clients, implementing UI/UX, SEO, accessibility, and performance best practices.
-- Worked directly with clients to understand business goals and deliver production-ready web solutions through new development, redesigns, and continuous product improvements.
+- Developed responsive React.js, WordPress, and Shopify websites for GoDaddy
+  clients, implementing UI/UX, SEO, accessibility, performance optimization, and
+  cross-browser compatibility.
+- Partnered directly with clients to translate business requirements into
+  production-ready web solutions, delivering new websites, redesigns, feature
+  enhancements, and ongoing improvements.
 
 ### Production Manager | Bosch
+Sep 2021 - Dec 2022
 
-- **Dates:** Sep 2021 to Dec 2022
-
-- Led a team of 35+ operators, increasing production output from 4,000 to 20,000 units and reducing defect rate from 5% to 1% using Lean (Toyota Production System), TQM, and Kaizen methodologies.
-- Optimized operations using Bosch Production System, SAP PP, Ishikawa, Kanban, and Fanuc automation to improve efficiency and reliability.
+- Led 35+ operators and improved production output from 4,000 to 20,000 units while
+  reducing defects from 5% to 1% through Lean, TQM, Kaizen, and continuous-improvement
+  practices.
+- Supported production planning and operational control using SAP PP, root-cause
+  analysis, Kanban, and manufacturing process improvement methods.
 
 ## Projects
 
+### Signalix - SaaS CRM and Analytics Platform
+
+Built responsive CRM and analytics applications using React.js, Next.js, TypeScript,
+Tailwind CSS, and RESTful APIs. Developed a Storybook design system with Atomic
+Design, improving consistency, WCAG accessibility, and performance.
+
+### Technical and SEO Audit Report Generator
+
+Built a tool that accepts a website URL and generates a detailed technical and SEO
+audit report as a PDF, using browser automation with Playwright and Puppeteer.
+
+### Shapeshifter - Custom Resume Generator
+
+Created a resume-generation workflow in TypeScript, React, and Express.js that takes
+a candidate profile and a job description as inputs, generates a tailored resume via
+an OpenRouter LLM integration, and renders it as a PDF with React PDF Renderer.
+
+### Job Hunter Scraper
+
+Created a job-hunting scraper in Python using Beautiful Soup, FastAPI, and SQLite to
+collect and store job listings from web pages.
+
 ### Hospital Management System
 
-- **Link:** https://github.com/mohamedaaqib3005/hospital-management-frontend
-- Built frontend using Vanilla JavaScript, REST APIs, Redis, and PostgreSQL.
-
-### GWS Hospital Management System
-
-- **Link:** https://github.com/mohamedaaqib3005/gws-react-postgres
-- Built a healthcare appointment platform using React.js, REST APIs, and Redis-based slot locking with a responsive UI for appointment booking and management.
+Healthcare appointment platform built with React.js, REST APIs, and PostgreSQL,
+including Redis-based slot locking for appointment availability and a responsive UI.
 
 ### Fitness Mobile App
 
-- **Link:** https://github.com/mohamedaaqib3005/stride-react-native
-- Multi-user fitness app built with React Native, OAuth, WebSockets, and real-time activity tracking.
-
-### Snake Game
-
-- **Link:** https://github.com/mohamedaaqib3005/snake-game
-- Built using Redux for state management, score tracking, and collision handling.
+Mobile application built with React Native featuring real-time activity tracking,
+using OAuth and WebSockets.
 
 ### Lisp (Scheme) Interpreter
 
-- **Link:** https://github.com/mohamedaaqib3005/lisp-interpreter
-- Built a Lisp (Scheme) interpreter in JavaScript with lexical analysis, parsing, AST construction, scope management, and evaluation of Scheme expressions.
+Interpreter written in JavaScript covering lexical analysis, parsing, AST
+construction, scope management, and evaluation.
 
-### Signalix — SaaS CRM & Analytics Platform
+### Snake Game
 
-- **Link:** https://github.com/mohamedaaqib3005/signalix
-- Built responsive CRM and analytics applications using React.js, Next.js, TypeScript, Tailwind CSS, and RESTful APIs. Developed a Storybook design system with Atomic Design, improving consistency, WCAG accessibility, and performance.
+Browser game built with JavaScript and Redux, covering state management, score
+tracking, and collision handling.
 
 ## Education
 
-- **Bachelor of Engineering**, Visvesvaraya Technological University
-- **Secondary Education**, St. Paul's English School, Bengaluru
+### Bachelor of Engineering
+AMC Engineering College, Bengaluru
 
 ## Certifications
 
-- Goethe-Zertifikat A1 (2021)
+- PDE License, 2020
+- Goethe-Zertifikat A1, 2021
 
 ## Languages
 
