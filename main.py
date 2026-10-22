@@ -14,7 +14,7 @@ def main() -> None:
     COOKIES_DIR.mkdir(exist_ok=True)
     args = sys.argv[1:]
     if not args:
-        print("Usage: python main.py [scrape|dashboard|fill <job_id>|description <platform> <url>|cookies|cleanup|deduplicate]")
+        print("Usage: python main.py [scrape|dashboard|apply [filters]|fill <job_id>|description <platform> <url>|cookies|cleanup|deduplicate]")
         return
 
     command = args[0]
@@ -53,6 +53,10 @@ def main() -> None:
                 platform = "naukri"
                 url = arg
         asyncio.run(run_description(platform, url))
+
+    elif command == "apply":
+        from applicator.apply_queue import main as apply_main
+        raise SystemExit(apply_main(args[1:]))
 
     elif command == "cookies":
         print_cookie_instructions()

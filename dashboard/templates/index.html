@@ -268,6 +268,61 @@
             return years === 1 ? "1 year ago" : `${years} years ago`;
         }
 
+        // Build the `python main.py apply` command from whatever filters are
+        // currently set, so a run covers exactly the rows on screen. Values
+        // are single-quoted because titles and searches contain spaces.
+        function showApplyCommand() {
+            const val = (name) => {
+                const el = document.querySelector(`[name="${name}"]`);
+                if (!el) return null;
+                const v = (el.value || "").trim();
+                return (!v || v === "all") ? null : v;
+            };
+            const shellQuote = (s) => "'" + String(s).replace(/'/g, "'\\''") + "'";
+
+            const parts = ["python main.py apply"];
+            const map = {
+                city: "--city", source: "--source", work_mode: "--work-mode",
+                posted_within: "--posted-within", q: "--search", max_exp: "--max-exp",
+            };
+            for (const [field, flag] of Object.entries(map)) {
+                const v = val(field);
+                if (v !== null) parts.push(flag, shellQuote(v));
+            }
+            const shown = document.querySelectorAll('tr[data-job-id]').length;
+            parts.push("--limit", String(Math.max(shown, 1)));
+
+            document.getElementById("apply-command").textContent = parts.join(" ");
+            document.getElementById("apply-panel").style.display = "block";
+            document.getElementById("apply-copied").style.display = "none";
+        }
+
+        function copyApplyCommand() {
+            const text = document.getElementById("apply-command").textContent;
+            const done = () => {
+                const tag = document.getElementById("apply-copied");
+                tag.style.display = "inline";
+                setTimeout(() => { tag.style.display = "none"; }, 2000);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+            } else {
+                fallbackCopy(text, done);
+            }
+        }
+
+        // clipboard API is unavailable on plain http in some browsers.
+        function fallbackCopy(text, done) {
+            const ta = document.createElement("textarea");
+            ta.value = text;
+            ta.style.position = "fixed";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand("copy"); done(); } catch (e) { /* leave it visible to copy by hand */ }
+            document.body.removeChild(ta);
+        }
+
         // Full timestamp in the viewer's own timezone, for the tooltip.
         function exactTime(isoString) {
             const date = new Date(isoString);
@@ -628,6 +683,33 @@
                onkeydown="if(event.key==='Enter'){applyFilter();}"
                style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; min-width: 200px;">
         <span style="align-self: center; font-size: 13px; color: #666;">{{ jobs|length }} shown</span>
+        <button type="button" onclick="showApplyCommand()" title="Work through these jobs one at a time, with the form pre-filled"
+                style="padding: 8px 14px; border: 1px solid #1a73e8; background: #fff; color: #1a73e8; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
+            Apply to these
+        </button>
+    </div>
+
+    <!-- The queue needs a person at the keyboard: it opens each job, fills what
+         it can, then waits while you review and submit. A background task
+         cannot do that, so the button hands you the command to run rather
+         than pretending to start something. -->
+    <div id="apply-panel" style="display:none; margin: 0 0 16px; padding: 14px 16px; background: #f1f7ff; border: 1px solid #c9ddf7; border-radius: 8px;">
+        <div style="font-size: 13px; color: #27405c; margin-bottom: 8px;">
+            Run this in the gobhunter folder. It opens each job in turn with your
+            resume attached and waits for you to submit. Nothing is sent for you.
+        </div>
+        <code id="apply-command" style="display:block; padding: 10px 12px; background:#fff; border:1px solid #d6e4f5; border-radius:6px; font-size:12.5px; word-break: break-all;"></code>
+        <div style="margin-top: 8px; display:flex; gap:8px; align-items:center;">
+            <button type="button" onclick="copyApplyCommand()"
+                    style="padding: 6px 12px; border: 1px solid #1a73e8; background: #1a73e8; color:#fff; border-radius: 5px; font-size: 12px; cursor: pointer;">
+                Copy
+            </button>
+            <span id="apply-copied" style="font-size:12px; color:#1a7f37; display:none;">copied</span>
+            <button type="button" onclick="document.getElementById('apply-panel').style.display='none'"
+                    style="padding: 6px 12px; border: 1px solid #ccc; background:#fff; color:#555; border-radius: 5px; font-size: 12px; cursor: pointer;">
+                Close
+            </button>
+        </div>
     </div>
 
     <table class="job-table">

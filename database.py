@@ -99,6 +99,7 @@ POSTED_WITHIN_MINUTES: dict[str, int] = {
     "30m": 30,
     "1h": 60,
     "24h": 60 * 24,
+    "2d": 60 * 24 * 2,
     "3d": 60 * 24 * 3,
     "7d": 60 * 24 * 7,
 }
@@ -686,6 +687,10 @@ def _row_to_job(row: sqlite3.Row) -> Job:
         salary_range=row["salary_range"],
         posted_date=row["posted_date"],
         status=JobStatus(row["status"]),
+        # Same omission as created_at below: update_job_status writes this
+        # whenever a job is marked applied, but nothing read it back, so
+        # job.applied_date was None even on jobs that had been applied to.
+        applied_date=row["applied_date"] if "applied_date" in keys else None,
         notes=row["notes"],
         resume_path=row["resume_path"] if "resume_path" in keys else None,
         resume_job_id=row["resume_job_id"] if "resume_job_id" in keys else None,
